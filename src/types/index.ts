@@ -44,6 +44,11 @@ export interface CatalogueSeries {
   latestValue?: number;
   isUpdatedToCurrentDate?: boolean; // verified actively published and updated to current dates
   currencyStatus?: 'CURRENT' | 'OUTDATED';
+  isMcpBenchmark?: boolean; // true if series draws global market clearing prices normalised to SGD
+  globalSourceBenchmark?: string; // e.g. "London Metal Exchange (LME)", "World Bank Pink Sheet", "US BLS Machinery"
+  globalCurrency?: string; // original currency before normalisation, e.g. "USD"
+  usdToSgdFxRate?: number; // exchange rate used for SGD normalisation, e.g. 1.3410
+  normalisationFormula?: string; // e.g. "Global Price (USD) * 1.3410 = SGD Price"
 }
 
 export interface CompositeWeightItem {
@@ -158,6 +163,16 @@ export interface CalculationTrace {
     benchmarkFormula: string;
     varianceFormula: string;
     substitutedValues: string;
+  };
+
+  // MCP Global Normalisation Details (when SingStat/BCA statistics lack current date prices)
+  isMcpBridged?: boolean;
+  mcpSourceDetails?: {
+    globalSource: string;
+    globalCurrency: string;
+    fxRateToSgd: number;
+    normalisationFormula: string;
+    note: string;
   };
 }
 

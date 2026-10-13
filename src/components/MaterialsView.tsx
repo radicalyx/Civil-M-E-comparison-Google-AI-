@@ -13,7 +13,9 @@ import {
   Edit2,
   Trash2,
   ArrowRight,
-  LineChart
+  LineChart,
+  Globe,
+  Sparkles
 } from 'lucide-react';
 import { CatalogueSeries, DataObservation, TenderLineItem } from '../types/index.ts';
 import { calculateItemBenchmark, sanitizeCsvField } from '../utils/calculations.ts';
@@ -249,10 +251,16 @@ export const MaterialsView: React.FC<MaterialsViewProps> = ({
                   setSelectedChartSeriesId(val);
                   if (val.includes('REBAR')) {
                     setQuickPrevPrice(880);
-                    setQuickNewPrice(1040);
+                    setQuickNewPrice(val.includes('MCP') ? 948 : 1040);
                   } else if (val.includes('CONCRETE')) {
                     setQuickPrevPrice(95);
-                    setQuickNewPrice(125);
+                    setQuickNewPrice(val.includes('MCP') ? 126.5 : 125);
+                  } else if (val.includes('COPPER')) {
+                    setQuickPrevPrice(124);
+                    setQuickNewPrice(142.8);
+                  } else if (val.includes('ALUMINIUM') || val.includes('ALUM')) {
+                    setQuickPrevPrice(104);
+                    setQuickNewPrice(124.6);
                   } else if (val.includes('CEMENT')) {
                     setQuickPrevPrice(88);
                     setQuickNewPrice(112);
@@ -266,13 +274,20 @@ export const MaterialsView: React.FC<MaterialsViewProps> = ({
                 }}
                 className="w-full bg-white border border-slate-300 rounded px-2.5 py-1.5 font-semibold text-slate-800 text-xs focus:ring-1 focus:ring-blue-600 focus:outline-hidden"
               >
-                <option value="BCA-MAT-STEEL-REBAR">Steel Rebar 16-32mm (BCA Market Rate)</option>
-                <option value="BCA-MAT-CONCRETE-G40">Ready-Mixed Concrete Grade 40 (BCA)</option>
-                <option value="BCA-MAT-CEMENT-BULK">Ordinary Portland Cement Bulk (BCA)</option>
-                <option value="BCA-MAT-SAND">Concreting Sand (BCA)</option>
-                <option value="BCA-MAT-GRANITE">Granite Aggregate 20mm (BCA)</option>
-                <option value="SINGSTAT-DSPI-DIV67">Structural Steel Sections (SingStat DSPI)</option>
-                <option value="SINGSTAT-DSPI-DIV77-CABLE">Insulated Wire &amp; Cables (SingStat DSPI)</option>
+                <optgroup label="🌐 Global Market Clearing Prices (MCP) - Current to 2026 (SGD-Normalised)">
+                  {civilSeries.filter(s => s.isMcpBenchmark).map(s => (
+                    <option key={s.id} value={s.id}>
+                      {s.title}
+                    </option>
+                  ))}
+                </optgroup>
+                <optgroup label="Singapore Statutory Rates (BCA & SingStat)">
+                  {civilSeries.filter(s => !s.isMcpBenchmark).map(s => (
+                    <option key={s.id} value={s.id}>
+                      {s.title}
+                    </option>
+                  ))}
+                </optgroup>
               </select>
             </div>
 
@@ -382,6 +397,15 @@ export const MaterialsView: React.FC<MaterialsViewProps> = ({
                     ? ' Contractor quote escalated faster than the official market benchmark.'
                     : ' Contractor quote is well-supported by official market movements.'}
                 </div>
+
+                {liveResult.trace?.isMcpBridged && (
+                  <div className="mt-2 p-2 bg-sky-100 rounded border border-sky-300 text-[10px] text-sky-950 flex items-start gap-1.5">
+                    <Globe className="w-3.5 h-3.5 text-sky-700 shrink-0 mt-0.5" />
+                    <div>
+                      <span className="font-bold">Global MCP Benchmark Active:</span> SingStat/BCA statistics lack current date prices. Comparing against Global Market Clearing Prices (LME/World Bank) normalised to SGD (1 USD = 1.34 SGD).
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 

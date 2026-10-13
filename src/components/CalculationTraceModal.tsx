@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Calculator, ArrowRight, CheckCircle2, AlertTriangle, BookOpen } from 'lucide-react';
+import { X, Calculator, ArrowRight, CheckCircle2, AlertTriangle, BookOpen, Globe } from 'lucide-react';
 import { CalculationTrace, TenderLineItem } from '../types/index.ts';
 
 interface CalculationTraceModalProps {
@@ -160,6 +160,30 @@ export const CalculationTraceModal: React.FC<CalculationTraceModalProps> = ({
                     SGD {trace.breakdownDetails.nonLabourAdjustedSgd?.toLocaleString()}
                   </div>
                   <div className="text-[10px] text-slate-500">Unchanged (Factor 1.0)</div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Global Market Clearing Price (MCP) Normalisation Panel */}
+          {trace.isMcpBridged && trace.mcpSourceDetails && (
+            <div className="p-3.5 bg-sky-50 border border-sky-200 rounded-lg space-y-2 text-xs">
+              <div className="flex items-center gap-1.5 font-bold text-sky-950">
+                <Globe className="w-4 h-4 text-sky-600" />
+                <span>Global Market Clearing Price (MCP) Normalisation Applied</span>
+              </div>
+              <p className="text-[11px] text-sky-800 leading-relaxed">
+                {trace.mcpSourceDetails.note}
+              </p>
+              <div className="bg-white p-2.5 rounded border border-sky-200 space-y-1 font-mono text-[10.5px]">
+                <div className="text-slate-700">
+                  <span className="font-semibold text-slate-900">Global Benchmark Feed:</span> {trace.mcpSourceDetails.globalSource}
+                </div>
+                <div className="text-slate-700">
+                  <span className="font-semibold text-slate-900">Normalisation Formula:</span> {trace.mcpSourceDetails.normalisationFormula}
+                </div>
+                <div className="text-slate-700">
+                  <span className="font-semibold text-slate-900">Exchange Rate Normaliser:</span> 1 {trace.mcpSourceDetails.globalCurrency} = {trace.mcpSourceDetails.fxRateToSgd.toFixed(4)} SGD (MAS Official Rate)
                 </div>
               </div>
             </div>

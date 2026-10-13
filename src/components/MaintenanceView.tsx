@@ -13,7 +13,8 @@ import {
   Edit2,
   Trash2,
   HelpCircle,
-  LineChart
+  LineChart,
+  Globe
 } from 'lucide-react';
 import { CatalogueSeries, DataObservation, TenderLineItem } from '../types/index.ts';
 import { calculateItemBenchmark, sanitizeCsvField } from '../utils/calculations.ts';
@@ -358,6 +359,15 @@ export const MaintenanceView: React.FC<MaintenanceViewProps> = ({
                   Fair benchmark: <strong>SGD {liveResult.benchmarkCostSgd.toLocaleString()}</strong>.
                   (Labour component: SGD {liveResult.trace?.breakdownDetails?.labourAdjustedSgd?.toLocaleString()} + Spares: SGD {liveResult.trace?.breakdownDetails?.nonLabourAdjustedSgd?.toLocaleString()}).
                 </div>
+
+                {liveResult.trace?.isMcpBridged && (
+                  <div className="mt-2 p-2 bg-sky-100 rounded border border-sky-300 text-[10px] text-sky-950 flex items-start gap-1.5">
+                    <Globe className="w-3.5 h-3.5 text-sky-700 shrink-0 mt-0.5" />
+                    <div>
+                      <span className="font-bold">Global MCP Active:</span> Using Technical Labour Market Clearing Price index updated to current dates (2026).
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 

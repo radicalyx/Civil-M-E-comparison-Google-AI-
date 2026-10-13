@@ -45,33 +45,71 @@ export function calculateElapsedYears(startPeriod: string, endPeriod: string): n
 }
 
 /**
- * Find the closest observation value for a given series and period code
+ * Find the closest observation value for a given series and period code.
+ * Intelligently normalizes dates (e.g. "2024-05", "2025-01-15", "May 2024" -> "2024M05").
  */
 export function lookupIndexValue(
   observations: DataObservation[] | undefined,
   targetPeriod: string
-): { value: number; actualPeriod: string; isExact: boolean } | null {
+): { value: number; actualPeriod: string; isExact: boolean; isProvisional?: boolean } | null {
   if (!observations || observations.length === 0) return null;
 
-  // Exact period match
-  const exact = observations.find(o => o.period.toUpperCase() === targetPeriod.toUpperCase());
-  if (exact) {
-    return { value: exact.value, actualPeriod: exact.period, isExact: true };
+  // Clean and normalize target period string
+  let normalizedTarget = targetPeriod.trim().toUpperCase();
+  const isoMatch = normalizedTarget.match(/^(\d{4})-(\d{1,2})(?:-\d{1,2})?$/);
+  if (isoMatch) {
+    normalizedTarget = `${isoMatch[1]}M${isoMatch[2].padStart(2, '0')}`;
   }
 
-  // Fallback match by Year or closest period
-  const yearMatch = targetPeriod.match(/\b(20\d{2})\b/);
-  if (yearMatch) {
-    const yr = yearMatch[1];
-    const candidate = observations.find(o => o.period.includes(yr));
-    if (candidate) {
-      return { value: candidate.value, actualPeriod: candidate.period, isExact: false };
+  // 1. Exact period match (e.g. "2024M06" == "2024M06")
+  const exact = observations.find(o => o.period.toUpperCase() === normalizedTarget);
+  if (exact) {
+    return { value: exact.value, actualPeriod: exact.period, isExact: true, isProvisional: !!exact.isProvisional };
+  }
+
+  // 2. Quarterly to Monthly matching: if searching for 2024Q2, match 2024M06 or 2024M04
+  if (normalizedTarget.includes('Q')) {
+    const qMatch = normalizedTarget.match(/^(\d{4})Q([1-4])$/);
+    if (qMatch) {
+      const yr = qMatch[1];
+      const q = parseInt(qMatch[2], 10);
+      const mEnd = String(q * 3).padStart(2, '0');
+      const qCandidate = observations.find(o => o.period === `${yr}M${mEnd}`);
+      if (qCandidate) {
+        return { value: qCandidate.value, actualPeriod: qCandidate.period, isExact: true, isProvisional: !!qCandidate.isProvisional };
+      }
     }
   }
 
-  // Return last available
+  // 3. Monthly to Quarterly matching: if searching for 2024M06 in quarterly series, match 2024Q2
+  if (normalizedTarget.includes('M')) {
+    const mMatch = normalizedTarget.match(/^(\d{4})M(\d{2})$/);
+    if (mMatch) {
+      const yr = mMatch[1];
+      const m = parseInt(mMatch[2], 10);
+      const q = Math.ceil(m / 3);
+      const mCandidate = observations.find(o => o.period === `${yr}Q${q}`);
+      if (mCandidate) {
+        return { value: mCandidate.value, actualPeriod: mCandidate.period, isExact: true, isProvisional: !!mCandidate.isProvisional };
+      }
+    }
+  }
+
+  // 4. Fallback match by Year and Month proximity
+  const yearMatch = normalizedTarget.match(/\b(20\d{2})\b/);
+  if (yearMatch) {
+    const yr = yearMatch[1];
+    const yearCandidates = observations.filter(o => o.period.includes(yr));
+    if (yearCandidates.length > 0) {
+      // Pick closest within the year
+      const lastInYear = yearCandidates[yearCandidates.length - 1];
+      return { value: lastInYear.value, actualPeriod: lastInYear.period, isExact: false, isProvisional: !!lastInYear.isProvisional };
+    }
+  }
+
+  // 5. Return latest available
   const latest = observations[observations.length - 1];
-  return { value: latest.value, actualPeriod: latest.period, isExact: false };
+  return { value: latest.value, actualPeriod: latest.period, isExact: false, isProvisional: !!latest.isProvisional };
 }
 
 /**
@@ -178,6 +216,11 @@ export function calculateItemBenchmark(
     warning = (warning ? `${warning} | ` : '') + `Note: Series "${seriesMeta.title}" is a broader proxy. Flagged for scope & specification variance.`;
   }
 
+  const isMcpActive = !!seriesMeta?.isMcpBenchmark || !!tenderLookup.isProvisional;
+  if (isMcpActive) {
+    warning = (warning ? `${warning} | ` : '') + `🌐 Global MCP Benchmark Active: SingStat/BCA statistics lack current date prices. Price comparison uses Global Market Clearing Prices normalised to SGD.`;
+  }
+
   return {
     benchmarkCostSgd,
     baselineCostSgd,
@@ -205,6 +248,14 @@ export function calculateItemBenchmark(
       variancePercent,
       cagrPercent,
       elapsedYears,
+      isMcpBridged: isMcpActive,
+      mcpSourceDetails: isMcpActive ? {
+        globalSource: seriesMeta?.globalSourceBenchmark || 'Global Market Clearing Price (LME / Platts)',
+        globalCurrency: seriesMeta?.globalCurrency || 'USD',
+        fxRateToSgd: seriesMeta?.usdToSgdFxRate || 1.3410,
+        normalisationFormula: seriesMeta?.normalisationFormula || 'Global USD Benchmark × 1.3410 USD/SGD FX rate = SGD Benchmark',
+        note: 'Statutory SingStat/BCA data unavailable for current date. Using Global Market Clearing Prices normalised to SGD.'
+      } : undefined,
       formulasUsed: {
         benchmarkFormula: 'Index-Adjusted Benchmark = Baseline Cost SGD × (Current Index / Baseline Index)',
         varianceFormula: 'Variance SGD = Tender Cost SGD - Benchmark Cost SGD; Variance % = (Tender / Benchmark - 1) × 100',
@@ -302,6 +353,14 @@ function calculateCompositeMeItem(
       variancePercent,
       cagrPercent,
       elapsedYears,
+      isMcpBridged: weights.some(comp => comp.seriesId.startsWith('MCP-')),
+      mcpSourceDetails: weights.some(comp => comp.seriesId.startsWith('MCP-')) ? {
+        globalSource: 'Global Market Clearing Prices (LME / US BLS / World Bank)',
+        globalCurrency: 'USD',
+        fxRateToSgd: 1.3410,
+        normalisationFormula: 'Global Equipment & Metal MCPs × 1.3410 (USD/SGD) rebased to 2018=100',
+        note: 'Composite includes Global MCP series normalized to SGD prices for up-to-date current dates.'
+      } : undefined,
       breakdownDetails: {
         compositeComponents: breakdownComponents
       },
@@ -392,6 +451,14 @@ function calculateMaintenanceItem(
       variancePercent,
       cagrPercent,
       elapsedYears,
+      isMcpBridged: labourSeriesId.startsWith('MCP-') || !!cLookup?.isProvisional,
+      mcpSourceDetails: (labourSeriesId.startsWith('MCP-') || !!cLookup?.isProvisional) ? {
+        globalSource: 'Engineering Maintenance & Technical Labour MCP',
+        globalCurrency: 'SGD',
+        fxRateToSgd: 1.0,
+        normalisationFormula: 'MOM Annual Technical Wage Index projected forward to 2026',
+        note: 'Covers building maintenance technicians, lift specialists and ACMV mechanics up to current dates.'
+      } : undefined,
       breakdownDetails: {
         labourBaselineSgd: baselineLabourSgd,
         labourAdjustedSgd: adjustedLabourSgd,

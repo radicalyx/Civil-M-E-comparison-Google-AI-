@@ -14,7 +14,8 @@ import {
   Sparkles,
   ChevronDown,
   ChevronUp,
-  X
+  X,
+  Globe
 } from 'lucide-react';
 import { CatalogueSeries, CompositeWeightItem, DataObservation, TenderLineItem } from '../types/index.ts';
 import { ME_TRADE_TEMPLATES } from '../server/catalogueData.ts';
@@ -58,6 +59,9 @@ export const MeSupplyInstallView: React.FC<MeSupplyInstallViewProps> = ({
     (!onlyCurrentReferences || c.isUpdatedToCurrentDate !== false) &&
     (
       c.category === 'ME_EQUIPMENT' ||
+      c.id === 'MCP-GLOBAL-COPPER' ||
+      c.id === 'MCP-GLOBAL-ALUMINIUM' ||
+      c.id === 'MCP-GLOBAL-MAINTENANCE-LABOUR' ||
       c.id === 'SINGSTAT-DSPI-DIV77-CABLE' ||
       c.id === 'SINGSTAT-DSPI-DIV68-ALUM' ||
       c.id === 'SINGSTAT-DSPI-DIV67' ||
@@ -596,6 +600,15 @@ export const MeSupplyInstallView: React.FC<MeSupplyInstallViewProps> = ({
                   Composite benchmark: <strong>SGD {liveResult.benchmarkCostSgd.toLocaleString()}</strong>.
                   Factor: <strong>{liveResult.trace?.indexFactor.toFixed(4)}</strong> based on customized breakdown composition.
                 </div>
+
+                {liveResult.trace?.isMcpBridged && (
+                  <div className="mt-2 p-2 bg-sky-100 rounded border border-sky-300 text-[10px] text-sky-950 flex items-start gap-1.5">
+                    <Globe className="w-3.5 h-3.5 text-sky-700 shrink-0 mt-0.5" />
+                    <div>
+                      <span className="font-bold">Global MCP Active:</span> Includes Global Market Clearing Prices (LME Copper/Equipment) normalised to SGD for up-to-date current dates.
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 

@@ -9,7 +9,9 @@ import {
   Layers,
   Search,
   BookOpen,
-  LineChart
+  LineChart,
+  Globe,
+  Sparkles
 } from 'lucide-react';
 import { CatalogueSeries, DataObservation } from '../types/index.ts';
 import { PriceIndexChart } from './PriceIndexChart.tsx';
@@ -168,6 +170,12 @@ export const BenchmarkMappingTable: React.FC<BenchmarkMappingTableProps> = ({
               </div>
 
               <div className="flex flex-wrap items-center gap-2">
+                {series.isMcpBenchmark && (
+                  <span className="inline-flex items-center gap-1 text-[10px] font-bold text-sky-800 bg-sky-50 border border-sky-300 px-2 py-0.5 rounded">
+                    <Globe className="w-3 h-3 text-sky-600" />
+                    <span>Global MCP (SGD-Normalised)</span>
+                  </span>
+                )}
                 <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
                   <span>Updated: {series.latestPeriod}</span>
@@ -182,6 +190,21 @@ export const BenchmarkMappingTable: React.FC<BenchmarkMappingTableProps> = ({
                 {getClassificationBadge(series.classification)}
               </div>
             </div>
+
+            {/* Global MCP Normalisation Formula Banner */}
+            {series.isMcpBenchmark && series.normalisationFormula && (
+              <div className="bg-sky-50 border border-sky-200 rounded p-2.5 text-xs flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-1.5">
+                  <Globe className="w-4 h-4 text-sky-600 shrink-0" />
+                  <span className="text-[11px] text-sky-900 font-mono">
+                    <strong>Normalisation to SGD:</strong> {series.normalisationFormula}
+                  </span>
+                </div>
+                <span className="text-[10px] text-sky-700 bg-white px-2 py-0.5 rounded border border-sky-200 font-semibold shrink-0">
+                  MAS FX Rate: 1 USD = {series.usdToSgdFxRate || 1.3410} SGD
+                </span>
+              </div>
+            )}
 
             {/* Scope, Inclusions and Exclusions Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">

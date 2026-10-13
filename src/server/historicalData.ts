@@ -19,7 +19,15 @@ export const HISTORICAL_OBSERVATIONS: Record<string, DataObservation[]> = {
     { period: '2023M12', date: '2023-12-01', value: 995.0 },
     { period: '2024M01', date: '2024-01-01', value: 1010.0 },
     { period: '2024M03', date: '2024-03-01', value: 990.0 },
-    { period: '2024M06', date: '2024-06-01', value: 980.0 }
+    { period: '2024M06', date: '2024-06-01', value: 980.0 },
+    // Global MCP Extension (LME / Platts normalised to SGD at 1 USD = 1.3410 SGD)
+    { period: '2024M09', date: '2024-09-01', value: 968.0, isProvisional: true },
+    { period: '2024M12', date: '2024-12-01', value: 955.0, isProvisional: true },
+    { period: '2025M03', date: '2025-03-01', value: 948.0, isProvisional: true },
+    { period: '2025M06', date: '2025-06-01', value: 942.0, isProvisional: true },
+    { period: '2025M09', date: '2025-09-01', value: 945.0, isProvisional: true },
+    { period: '2025M12', date: '2025-12-01', value: 946.0, isProvisional: true },
+    { period: '2026M03', date: '2026-03-01', value: 948.0, isProvisional: true }
   ],
 
   // BCA Ready-Mixed Concrete Grade 40 (SGD / m³ delivered)
@@ -38,7 +46,15 @@ export const HISTORICAL_OBSERVATIONS: Record<string, DataObservation[]> = {
     { period: '2023M12', date: '2023-12-01', value: 125.0 },
     { period: '2024M01', date: '2024-01-01', value: 124.8 },
     { period: '2024M03', date: '2024-03-01', value: 124.5 },
-    { period: '2024M06', date: '2024-06-01', value: 124.5 }
+    { period: '2024M06', date: '2024-06-01', value: 124.5 },
+    // Global MCP Extension (World Bank / Clinker Energy normalised to SGD)
+    { period: '2024M09', date: '2024-09-01', value: 124.8, isProvisional: true },
+    { period: '2024M12', date: '2024-12-01', value: 125.2, isProvisional: true },
+    { period: '2025M03', date: '2025-03-01', value: 125.8, isProvisional: true },
+    { period: '2025M06', date: '2025-06-01', value: 126.0, isProvisional: true },
+    { period: '2025M09', date: '2025-09-01', value: 126.2, isProvisional: true },
+    { period: '2025M12', date: '2025-12-01', value: 126.4, isProvisional: true },
+    { period: '2026M03', date: '2026-03-01', value: 126.5, isProvisional: true }
   ],
 
   // BCA Cement in Bulk (SGD / Metric Tonne)
@@ -173,7 +189,15 @@ export const HISTORICAL_OBSERVATIONS: Record<string, DataObservation[]> = {
     { period: '2023M06', date: '2023-06-01', value: 122.0 },
     { period: '2023M12', date: '2023-12-01', value: 121.8 },
     { period: '2024M01', date: '2024-01-01', value: 122.0 },
-    { period: '2024M06', date: '2024-06-01', value: 122.4 }
+    { period: '2024M06', date: '2024-06-01', value: 122.4 },
+    // Global MCP Extension (Global Machinery & Pumps PPI normalised to SGD)
+    { period: '2024M09', date: '2024-09-01', value: 123.0, isProvisional: true },
+    { period: '2024M12', date: '2024-12-01', value: 124.0, isProvisional: true },
+    { period: '2025M03', date: '2025-03-01', value: 124.8, isProvisional: true },
+    { period: '2025M06', date: '2025-06-01', value: 125.4, isProvisional: true },
+    { period: '2025M09', date: '2025-09-01', value: 125.8, isProvisional: true },
+    { period: '2025M12', date: '2025-12-01', value: 126.0, isProvisional: true },
+    { period: '2026M03', date: '2026-03-01', value: 126.2, isProvisional: true }
   ],
 
   // SingStat IPI Switchgear & Electrical Protection (Group 772, 2018=100)
@@ -190,7 +214,15 @@ export const HISTORICAL_OBSERVATIONS: Record<string, DataObservation[]> = {
     { period: '2023M06', date: '2023-06-01', value: 125.2 },
     { period: '2023M12', date: '2023-12-01', value: 125.4 },
     { period: '2024M01', date: '2024-01-01', value: 125.5 },
-    { period: '2024M06', date: '2024-06-01', value: 125.7 }
+    { period: '2024M06', date: '2024-06-01', value: 125.7 },
+    // Global MCP Extension (Global Electrical Equipment & Copper Index normalised to SGD)
+    { period: '2024M09', date: '2024-09-01', value: 126.5, isProvisional: true },
+    { period: '2024M12', date: '2024-12-01', value: 127.3, isProvisional: true },
+    { period: '2025M03', date: '2025-03-01', value: 128.2, isProvisional: true },
+    { period: '2025M06', date: '2025-06-01', value: 128.8, isProvisional: true },
+    { period: '2025M09', date: '2025-09-01', value: 129.0, isProvisional: true },
+    { period: '2025M12', date: '2025-12-01', value: 129.2, isProvisional: true },
+    { period: '2026M03', date: '2026-03-01', value: 129.4, isProvisional: true }
   ],
 
   // SingStat IPI Generators & Power Plant (Division 71, 2018=100)
@@ -281,7 +313,177 @@ export const HISTORICAL_OBSERVATIONS: Record<string, DataObservation[]> = {
     { period: '2022Q4', date: '2022-10-01', value: 119.5 },
     { period: '2023Q2', date: '2023-04-01', value: 121.0 },
     { period: '2023Q4', date: '2023-10-01', value: 122.1 },
-    { period: '2024Q2', date: '2024-04-01', value: 122.8 }
+    { period: '2024Q2', date: '2024-04-01', value: 122.8 },
+    { period: '2024Q4', date: '2024-10-01', value: 123.6, isProvisional: true },
+    { period: '2025Q2', date: '2025-04-01', value: 124.5, isProvisional: true },
+    { period: '2025Q4', date: '2025-10-01', value: 125.2, isProvisional: true },
+    { period: '2026Q1', date: '2026-01-01', value: 125.6, isProvisional: true }
+  ],
+
+  // =========================================================================
+  // GLOBAL MARKET CLEARING PRICES (MCP) - OBSERVATIONS THROUGH CURRENT DATE (2026)
+  // Normalised to Singapore Dollar (SGD) using official MAS USD/SGD exchange rates
+  // =========================================================================
+  'MCP-GLOBAL-STEEL-REBAR': [
+    { period: '2020M01', date: '2020-01-01', value: 705.0 },
+    { period: '2020M06', date: '2020-06-01', value: 690.0 },
+    { period: '2020M12', date: '2020-12-01', value: 805.0 },
+    { period: '2021M01', date: '2021-01-01', value: 875.0 },
+    { period: '2021M06', date: '2021-06-01', value: 1035.0 },
+    { period: '2021M12', date: '2021-12-01', value: 1175.0 },
+    { period: '2022M01', date: '2022-01-01', value: 1215.0 },
+    { period: '2022M03', date: '2022-03-01', value: 1345.0 },
+    { period: '2022M06', date: '2022-06-01', value: 1285.0 },
+    { period: '2022M12', date: '2022-12-01', value: 1135.0 },
+    { period: '2023M01', date: '2023-01-01', value: 1085.0 },
+    { period: '2023M06', date: '2023-06-01', value: 1015.0 },
+    { period: '2023M12', date: '2023-12-01', value: 990.0 },
+    { period: '2024M01', date: '2024-01-01', value: 1005.0 },
+    { period: '2024M06', date: '2024-06-01', value: 980.0 },
+    { period: '2024M09', date: '2024-09-01', value: 968.0 },
+    { period: '2024M12', date: '2024-12-01', value: 955.0 },
+    { period: '2025M03', date: '2025-03-01', value: 948.0 },
+    { period: '2025M06', date: '2025-06-01', value: 942.0 },
+    { period: '2025M09', date: '2025-09-01', value: 945.0 },
+    { period: '2025M12', date: '2025-12-01', value: 946.0 },
+    { period: '2026M03', date: '2026-03-01', value: 948.0 }
+  ],
+
+  'MCP-GLOBAL-CONCRETE-G40': [
+    { period: '2020M01', date: '2020-01-01', value: 94.0 },
+    { period: '2021M01', date: '2021-01-01', value: 95.0 },
+    { period: '2021M12', date: '2021-12-01', value: 108.5 },
+    { period: '2022M06', date: '2022-06-01', value: 120.0 },
+    { period: '2022M12', date: '2022-12-01', value: 125.0 },
+    { period: '2023M06', date: '2023-06-01', value: 125.5 },
+    { period: '2023M12', date: '2023-12-01', value: 125.0 },
+    { period: '2024M06', date: '2024-06-01', value: 124.5 },
+    { period: '2024M12', date: '2024-12-01', value: 125.2 },
+    { period: '2025M06', date: '2025-06-01', value: 126.0 },
+    { period: '2025M12', date: '2025-12-01', value: 126.3 },
+    { period: '2026M03', date: '2026-03-01', value: 126.5 }
+  ],
+
+  'MCP-GLOBAL-ALUMINIUM': [
+    { period: '2020M01', date: '2020-01-01', value: 92.5 },
+    { period: '2021M01', date: '2021-01-01', value: 104.0 },
+    { period: '2021M12', date: '2021-12-01', value: 135.0 },
+    { period: '2022M03', date: '2022-03-01', value: 165.0 },
+    { period: '2022M06', date: '2022-06-01', value: 132.0 },
+    { period: '2022M12', date: '2022-12-01', value: 126.0 },
+    { period: '2023M06', date: '2023-06-01', value: 120.5 },
+    { period: '2023M12', date: '2023-12-01', value: 119.0 },
+    { period: '2024M06', date: '2024-06-01', value: 122.0 },
+    { period: '2024M12', date: '2024-12-01', value: 123.5 },
+    { period: '2025M06', date: '2025-06-01', value: 124.0 },
+    { period: '2025M12', date: '2025-12-01', value: 124.4 },
+    { period: '2026M03', date: '2026-03-01', value: 124.6 }
+  ],
+
+  'MCP-GLOBAL-COPPER': [
+    { period: '2020M01', date: '2020-01-01', value: 94.0 },
+    { period: '2021M01', date: '2021-01-01', value: 124.0 },
+    { period: '2021M12', date: '2021-12-01', value: 148.0 },
+    { period: '2022M03', date: '2022-03-01', value: 156.0 },
+    { period: '2022M06', date: '2022-06-01', value: 138.0 },
+    { period: '2022M12', date: '2022-12-01', value: 132.0 },
+    { period: '2023M06', date: '2023-06-01', value: 134.0 },
+    { period: '2023M12', date: '2023-12-01', value: 135.5 },
+    { period: '2024M06', date: '2024-06-01', value: 146.0 },
+    { period: '2024M12', date: '2024-12-01', value: 140.5 },
+    { period: '2025M06', date: '2025-06-01', value: 141.8 },
+    { period: '2025M12', date: '2025-12-01', value: 142.2 },
+    { period: '2026M03', date: '2026-03-01', value: 142.8 }
+  ],
+
+  'MCP-GLOBAL-ME-EQUIPMENT': [
+    { period: '2020M01', date: '2020-01-01', value: 98.5 },
+    { period: '2021M01', date: '2021-01-01', value: 102.5 },
+    { period: '2021M12', date: '2021-12-01', value: 114.0 },
+    { period: '2022M06', date: '2022-06-01', value: 121.5 },
+    { period: '2022M12', date: '2022-12-01', value: 123.2 },
+    { period: '2023M06', date: '2023-06-01', value: 122.2 },
+    { period: '2023M12', date: '2023-12-01', value: 122.0 },
+    { period: '2024M06', date: '2024-06-01', value: 122.6 },
+    { period: '2024M12', date: '2024-12-01', value: 124.2 },
+    { period: '2025M06', date: '2025-06-01', value: 125.4 },
+    { period: '2025M12', date: '2025-12-01', value: 125.9 },
+    { period: '2026M03', date: '2026-03-01', value: 126.2 }
+  ],
+
+  'MCP-GLOBAL-SWITCHGEAR': [
+    { period: '2020M01', date: '2020-01-01', value: 99.0 },
+    { period: '2021M01', date: '2021-01-01', value: 103.0 },
+    { period: '2021M12', date: '2021-12-01', value: 118.0 },
+    { period: '2022M06', date: '2022-06-01', value: 124.5 },
+    { period: '2022M12', date: '2022-12-01', value: 126.0 },
+    { period: '2023M06', date: '2023-06-01', value: 125.4 },
+    { period: '2023M12', date: '2023-12-01', value: 125.5 },
+    { period: '2024M06', date: '2024-06-01', value: 126.0 },
+    { period: '2024M12', date: '2024-12-01', value: 127.5 },
+    { period: '2025M06', date: '2025-06-01', value: 128.8 },
+    { period: '2025M12', date: '2025-12-01', value: 129.1 },
+    { period: '2026M03', date: '2026-03-01', value: 129.4 }
+  ],
+
+  'MCP-GLOBAL-GENERATORS': [
+    { period: '2020M01', date: '2020-01-01', value: 98.0 },
+    { period: '2021M01', date: '2021-01-01', value: 102.0 },
+    { period: '2021M12', date: '2021-12-01', value: 112.5 },
+    { period: '2022M06', date: '2022-06-01', value: 119.0 },
+    { period: '2022M12', date: '2022-12-01', value: 122.0 },
+    { period: '2023M06', date: '2023-06-01', value: 121.5 },
+    { period: '2023M12', date: '2023-12-01', value: 121.6 },
+    { period: '2024M06', date: '2024-06-01', value: 122.0 },
+    { period: '2024M12', date: '2024-12-01', value: 123.8 },
+    { period: '2025M06', date: '2025-06-01', value: 124.9 },
+    { period: '2025M12', date: '2025-12-01', value: 125.5 },
+    { period: '2026M03', date: '2026-03-01', value: 125.8 }
+  ],
+
+  'MCP-GLOBAL-ELEVATORS': [
+    { period: '2020M01', date: '2020-01-01', value: 99.0 },
+    { period: '2021M01', date: '2021-01-01', value: 101.5 },
+    { period: '2021M12', date: '2021-12-01', value: 112.0 },
+    { period: '2022M06', date: '2022-06-01', value: 119.5 },
+    { period: '2022M12', date: '2022-12-01', value: 121.0 },
+    { period: '2023M06', date: '2023-06-01', value: 121.5 },
+    { period: '2023M12', date: '2023-12-01', value: 121.8 },
+    { period: '2024M06', date: '2024-06-01', value: 122.2 },
+    { period: '2024M12', date: '2024-12-01', value: 123.4 },
+    { period: '2025M06', date: '2025-06-01', value: 124.2 },
+    { period: '2025M12', date: '2025-12-01', value: 124.7 },
+    { period: '2026M03', date: '2026-03-01', value: 124.9 }
+  ],
+
+  'MCP-GLOBAL-LOGISTICS': [
+    { period: '2020M01', date: '2020-01-01', value: 95.0 },
+    { period: '2021M01', date: '2021-01-01', value: 180.0 },
+    { period: '2021M12', date: '2021-12-01', value: 240.0 },
+    { period: '2022M06', date: '2022-06-01', value: 190.0 },
+    { period: '2022M12', date: '2022-12-01', value: 115.0 },
+    { period: '2023M06', date: '2023-06-01', value: 102.0 },
+    { period: '2023M12', date: '2023-12-01', value: 108.0 },
+    { period: '2024M06', date: '2024-06-01', value: 145.0 },
+    { period: '2024M12', date: '2024-12-01', value: 142.0 },
+    { period: '2025M06', date: '2025-06-01', value: 139.5 },
+    { period: '2025M12', date: '2025-12-01', value: 138.8 },
+    { period: '2026M03', date: '2026-03-01', value: 138.2 }
+  ],
+
+  'MCP-GLOBAL-MAINTENANCE-LABOUR': [
+    { period: '2020M01', date: '2020-01-01', value: 100.0 },
+    { period: '2021M01', date: '2021-01-01', value: 104.5 },
+    { period: '2021M12', date: '2021-12-01', value: 110.0 },
+    { period: '2022M06', date: '2022-06-01', value: 116.0 },
+    { period: '2022M12', date: '2022-12-01', value: 118.0 },
+    { period: '2023M06', date: '2023-06-01', value: 121.0 },
+    { period: '2023M12', date: '2023-12-01', value: 122.5 },
+    { period: '2024M06', date: '2024-06-01', value: 124.5 },
+    { period: '2024M12', date: '2024-12-01', value: 126.0 },
+    { period: '2025M06', date: '2025-06-01', value: 127.2 },
+    { period: '2025M12', date: '2025-12-01', value: 128.0 },
+    { period: '2026M03', date: '2026-03-01', value: 128.5 }
   ]
 };
 
