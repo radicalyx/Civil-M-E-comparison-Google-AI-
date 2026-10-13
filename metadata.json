@@ -1,0 +1,6 @@
+{
+  "name": "Singapore Tender Price Benchmark & Escalation Comparator",
+  "description": "Procurement benchmark and escalation analysis platform for Singapore construction materials, M&E supply & installation, and facility maintenance labour using SingStat, BCA, and MAS official indices.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
