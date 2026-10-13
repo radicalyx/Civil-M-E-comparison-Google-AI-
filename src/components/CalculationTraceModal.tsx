@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Calculator, ArrowRight, CheckCircle2, AlertTriangle, BookOpen, Globe } from 'lucide-react';
+import { X, Calculator, ArrowRight, CheckCircle2, AlertTriangle, BookOpen, Globe, Clock } from 'lucide-react';
 import { CalculationTrace, TenderLineItem } from '../types/index.ts';
 
 interface CalculationTraceModalProps {
@@ -53,7 +53,9 @@ export const CalculationTraceModal: React.FC<CalculationTraceModalProps> = ({
               <div className="text-sm font-bold text-slate-900 mt-0.5">
                 SGD {trace.baselineCostSgd.toLocaleString()}
               </div>
-              <div className="text-[10px] text-slate-400">{trace.baselinePeriod}</div>
+              <div className="text-[10px] text-slate-400">
+                {trace.baselinePeriod} {trace.baselineDurationMonths ? `(${trace.baselineDurationMonths}m)` : ''}
+              </div>
             </div>
 
             <div>
@@ -61,7 +63,9 @@ export const CalculationTraceModal: React.FC<CalculationTraceModalProps> = ({
               <div className="text-sm font-bold text-slate-900 mt-0.5">
                 SGD {trace.tenderCostSgd.toLocaleString()}
               </div>
-              <div className="text-[10px] text-slate-400">{trace.tenderPeriod}</div>
+              <div className="text-[10px] text-slate-400">
+                {trace.tenderPeriod} {trace.tenderDurationMonths ? `(${trace.tenderDurationMonths}m)` : ''}
+              </div>
             </div>
 
             <div>
@@ -69,7 +73,9 @@ export const CalculationTraceModal: React.FC<CalculationTraceModalProps> = ({
               <div className="text-sm font-bold text-blue-900 mt-0.5">
                 SGD {trace.benchmarkCostSgd.toLocaleString()}
               </div>
-              <div className="text-[10px] text-blue-600">Factor: {trace.indexFactor.toFixed(4)}</div>
+              <div className="text-[10px] text-blue-600">
+                Factor: {trace.indexFactor.toFixed(4)} {trace.isDurationAdjusted ? `(${trace.durationRatio?.toFixed(2)}× term)` : ''}
+              </div>
             </div>
 
             <div>
@@ -99,18 +105,50 @@ export const CalculationTraceModal: React.FC<CalculationTraceModalProps> = ({
               </div>
             </div>
 
+            {/* Contract Duration Factor Section */}
+            {trace.isDurationAdjusted && (
+              <div className="p-3 bg-indigo-950 text-indigo-100 rounded-lg space-y-1.5 font-mono text-[11px] border border-indigo-700">
+                <div className="text-amber-400 font-sans text-xs font-bold flex items-center gap-1.5">
+                  <Clock className="w-3.5 h-3.5 text-amber-400" />
+                  <span>2. Contract Duration Normalisation &amp; Term Adjustment Factor:</span>
+                </div>
+                <div>Duration Scaling Ratio = Tender Term ({trace.tenderDurationMonths} months) ÷ Baseline Term ({trace.baselineDurationMonths} months) = <strong>{trace.durationRatio?.toFixed(4)}×</strong></div>
+                <div className="text-indigo-200">
+                  Like-for-like Term Scaling: Benchmark cost scales by {trace.durationRatio?.toFixed(4)}× to reflect new contract length.
+                </div>
+                <div className="text-indigo-300 text-[10.5px] pt-1 border-t border-indigo-800 flex flex-wrap gap-x-4 gap-y-1 font-sans">
+                  <span>Baseline Equivalent: <strong>SGD {trace.baselineMonthlyRateSgd?.toLocaleString()}/mo</strong></span>
+                  <span>Tender Equivalent: <strong>SGD {trace.tenderMonthlyRateSgd?.toLocaleString()}/mo</strong></span>
+                  <span>Benchmark Equivalent: <strong>SGD {trace.benchmarkMonthlyRateSgd?.toLocaleString()}/mo</strong></span>
+                </div>
+              </div>
+            )}
+
             {/* Formula 2: Index-Adjusted Benchmark */}
             <div className="p-3 bg-slate-900 text-slate-100 rounded-lg space-y-1 font-mono text-[11px]">
-              <div className="text-amber-400 font-sans text-xs font-bold">2. Index-Adjusted Baseline Benchmark (SGD):</div>
-              <div>Benchmark SGD = Comparable Baseline Price SGD × Index Factor</div>
-              <div className="text-slate-300">
-                Substituted: SGD {trace.baselineCostSgd.toLocaleString()} × {trace.indexFactor.toFixed(4)} = <strong>SGD {trace.benchmarkCostSgd.toLocaleString()}</strong>
+              <div className="text-amber-400 font-sans text-xs font-bold">
+                {trace.isDurationAdjusted ? '3. Duration & Index-Adjusted Baseline Benchmark (SGD):' : '2. Index-Adjusted Baseline Benchmark (SGD):'}
               </div>
+              {trace.isDurationAdjusted ? (
+                <>
+                  <div>Benchmark SGD = Comparable Baseline Price SGD × Index Factor × Duration Ratio ({trace.durationRatio?.toFixed(2)}×)</div>
+                  <div className="text-slate-300">
+                    Substituted: SGD {trace.baselineCostSgd.toLocaleString()} × {trace.indexFactor.toFixed(4)} × {trace.durationRatio?.toFixed(4)} = <strong>SGD {trace.benchmarkCostSgd.toLocaleString()}</strong> (SGD {trace.benchmarkMonthlyRateSgd?.toLocaleString()}/mo)
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div>Benchmark SGD = Comparable Baseline Price SGD × Index Factor</div>
+                  <div className="text-slate-300">
+                    Substituted: SGD {trace.baselineCostSgd.toLocaleString()} × {trace.indexFactor.toFixed(4)} = <strong>SGD {trace.benchmarkCostSgd.toLocaleString()}</strong>
+                  </div>
+                </>
+              )}
             </div>
 
             {/* Formula 3: Variance & Premium */}
             <div className="p-3 bg-slate-900 text-slate-100 rounded-lg space-y-1 font-mono text-[11px]">
-              <div className="text-amber-400 font-sans text-xs font-bold">3. Tender Variance &amp; Premium/Discount %:</div>
+              <div className="text-amber-400 font-sans text-xs font-bold">{trace.isDurationAdjusted ? '4.' : '3.'} Tender Variance &amp; Premium/Discount %:</div>
               <div>Variance SGD = Current Tender SGD - Benchmark SGD</div>
               <div>Variance % = ((Current Tender SGD / Benchmark SGD) - 1) × 100</div>
               <div className="text-slate-300">
@@ -120,10 +158,10 @@ export const CalculationTraceModal: React.FC<CalculationTraceModalProps> = ({
 
             {/* Formula 4: Compound Annual Growth Rate (CAGR) */}
             <div className="p-3 bg-slate-900 text-slate-100 rounded-lg space-y-1 font-mono text-[11px]">
-              <div className="text-amber-400 font-sans text-xs font-bold">4. Compound Annual Escalation Rate (CAGR):</div>
-              <div>CAGR = ((Current Tender / Baseline Price)^(1 / Elapsed Years) - 1) × 100</div>
+              <div className="text-amber-400 font-sans text-xs font-bold">{trace.isDurationAdjusted ? '5.' : '4.'} Compound Annual Escalation Rate (CAGR):</div>
+              <div>CAGR = ((Current Tender / (Baseline Price × Duration Ratio))^(1 / Elapsed Years) - 1) × 100</div>
               <div className="text-slate-300">
-                Substituted: ((SGD {trace.tenderCostSgd.toLocaleString()} / SGD {trace.baselineCostSgd.toLocaleString()})^(1 / {trace.elapsedYears.toFixed(2)} yrs) - 1) × 100 = <strong>{trace.cagrPercent.toFixed(2)}% p.a.</strong>
+                Substituted: ((SGD {trace.tenderCostSgd.toLocaleString()} / SGD {(trace.baselineCostSgd * (trace.durationRatio || 1)).toLocaleString()})^(1 / {trace.elapsedYears.toFixed(2)} yrs) - 1) × 100 = <strong>{trace.cagrPercent.toFixed(2)}% p.a.</strong>
               </div>
             </div>
           </div>

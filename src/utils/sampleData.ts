@@ -253,6 +253,8 @@ export const SAMPLE_TENDER_ITEMS: TenderLineItem[] = [
     specification: 'Quarterly servicing of 4x chillers, monthly servicing of 32x AHUs, 240x FCUs, cooling towers, chemical water treatment',
     scopeDifferencesFlag: 'SLA response time tightened from 4 hours to 2 hours for critical cleanroom areas',
     contractDurationMonths: 36,
+    baselineContractDurationMonths: 36,
+    tenderContractDurationMonths: 36,
     labourSharePercent: 75,
     nonLabourEscalationFactor: 1.0,
     technicianHeadcount: 4,
@@ -271,5 +273,34 @@ export const SAMPLE_TENDER_ITEMS: TenderLineItem[] = [
     benchmarkSeriesId: 'MOM-WAGE-TECH-ME',
     overrideBenchmarkSeriesId: 'SINGSTAT-ULC-CONST',
     notes: 'Non-comprehensive maintenance: 75% labour share escalated via SingStat Construction Unit Labour Cost; 25% consumable spares held fixed.'
+  },
+  {
+    id: 'SAMPLE-MNT-009',
+    tendererName: 'Sembcorp Facilities Management Pte Ltd',
+    category: 'MAINTENANCE',
+    itemCode: 'MNT-ELEC-2YR',
+    description: '[Sample data] 2-Year Renewal Electrical & Generator Maintenance (Scaled from 1-Year Baseline)',
+    specification: 'Routine servicing of 22kV switchgear, transformer oil testing, and standby generator monthly load runs. Scaled from 12-month previous term to 24-month renewal term.',
+    scopeDifferencesFlag: 'New tender extends term from 12 months to 24 months (2.0× duration multiplier)',
+    contractDurationMonths: 24,
+    baselineContractDurationMonths: 12,
+    tenderContractDurationMonths: 24,
+    labourSharePercent: 70,
+    nonLabourEscalationFactor: 1.0,
+    technicianHeadcount: 2,
+    serviceFrequency: 'Bi-monthly inspections + 24/7 emergency response',
+    quantity: 1,
+    unit: '2-Year Contract',
+    currency: 'SGD',
+    exchangeRateToSgd: 1.0,
+    gstBasis: 'EXCLUSIVE',
+    baselinePriceDate: '2021M01',
+    baselineUnitPrice: 120000, // 12-month baseline
+    baselineTotalPrice: 120000,
+    tenderPriceDate: '2026M03',
+    tenderUnitPrice: 275000, // 24-month tender
+    tenderTotalPrice: 275000,
+    benchmarkSeriesId: 'MCP-ASIA-MAINTENANCE-LABOUR',
+    notes: 'Demonstrates contract term duration scaling: 12-month baseline (SGD 120k) is scaled by 2.0x (24m/12m) to SGD 240k before applying market escalation, allowing like-for-like term comparison.'
   }
 ];

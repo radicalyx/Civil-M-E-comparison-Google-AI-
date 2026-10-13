@@ -37,14 +37,15 @@ export const TenderItemModal: React.FC<TenderItemModalProps> = ({
   const [gstBasis, setGstBasis] = useState<GstBasis>('EXCLUSIVE');
 
   const [baselineDate, setBaselineDate] = useState('2021M01');
+  const [baselineDurationMonths, setBaselineDurationMonths] = useState<number>(12);
   const [baselineUnitPrice, setBaselineUnitPrice] = useState(100000);
   const [tenderDate, setTenderDate] = useState('2024M06');
+  const [tenderDurationMonths, setTenderDurationMonths] = useState<number>(12);
   const [tenderUnitPrice, setTenderUnitPrice] = useState(115000);
 
   const [benchmarkSeriesId, setBenchmarkSeriesId] = useState('BCA-MAT-STEEL-REBAR');
 
   // Maintenance fields
-  const [contractDurationMonths, setContractDurationMonths] = useState(12);
   const [labourSharePercent, setLabourSharePercent] = useState(70);
   const [technicianHeadcount, setTechnicianHeadcount] = useState(2);
   const [serviceFrequency, setServiceFrequency] = useState('Monthly scheduled servicing');
@@ -82,11 +83,12 @@ export const TenderItemModal: React.FC<TenderItemModalProps> = ({
       setExchangeRate(itemToEdit.exchangeRateToSgd);
       setGstBasis(itemToEdit.gstBasis);
       setBaselineDate(itemToEdit.baselinePriceDate);
+      setBaselineDurationMonths(itemToEdit.baselineContractDurationMonths || itemToEdit.contractDurationMonths || 12);
       setBaselineUnitPrice(itemToEdit.baselineUnitPrice);
       setTenderDate(itemToEdit.tenderPriceDate);
+      setTenderDurationMonths(itemToEdit.tenderContractDurationMonths || itemToEdit.contractDurationMonths || 12);
       setTenderUnitPrice(itemToEdit.tenderUnitPrice);
       setBenchmarkSeriesId(itemToEdit.overrideBenchmarkSeriesId || itemToEdit.benchmarkSeriesId);
-      if (itemToEdit.contractDurationMonths) setContractDurationMonths(itemToEdit.contractDurationMonths);
       if (itemToEdit.labourSharePercent !== undefined) setLabourSharePercent(itemToEdit.labourSharePercent);
       if (itemToEdit.technicianHeadcount) setTechnicianHeadcount(itemToEdit.technicianHeadcount);
       if (itemToEdit.serviceFrequency) setServiceFrequency(itemToEdit.serviceFrequency);
@@ -158,14 +160,18 @@ export const TenderItemModal: React.FC<TenderItemModalProps> = ({
       exchangeRateToSgd: exchangeRate,
       gstBasis,
       baselinePriceDate: baselineDate,
+      baselineContractDurationMonths: baselineDurationMonths,
+      baselineContractPeriodLabel: `${baselineDate} (${baselineDurationMonths} mos)`,
       baselineUnitPrice,
       baselineTotalPrice: baselineUnitPrice * quantity,
       tenderPriceDate: tenderDate,
+      tenderContractDurationMonths: tenderDurationMonths,
+      tenderContractPeriodLabel: `${tenderDate} (${tenderDurationMonths} mos)`,
       tenderUnitPrice,
       tenderTotalPrice: tenderUnitPrice * quantity,
       benchmarkSeriesId,
       customCompositeWeights: category === 'ME_TRADE' ? modalWeights : undefined,
-      contractDurationMonths: category === 'MAINTENANCE' ? contractDurationMonths : undefined,
+      contractDurationMonths: tenderDurationMonths,
       labourSharePercent: category === 'MAINTENANCE' ? labourSharePercent : undefined,
       technicianHeadcount: category === 'MAINTENANCE' ? technicianHeadcount : undefined,
       serviceFrequency: category === 'MAINTENANCE' ? serviceFrequency : undefined
@@ -376,66 +382,104 @@ export const TenderItemModal: React.FC<TenderItemModalProps> = ({
           </div>
 
           {/* Pricing Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-slate-50 p-3 rounded-lg border border-slate-200">
-            {/* Baseline / Previous Contract */}
-            <div className="space-y-2.5 bg-white p-2.5 rounded border border-slate-200">
-              <div className="font-bold text-slate-800 text-[11px] uppercase tracking-wider flex items-center justify-between">
-                <span>Previous Contract / Baseline</span>
-              </div>
+          <div className="space-y-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-slate-50 p-3 rounded-lg border border-slate-200">
+              {/* Baseline / Previous Contract */}
+              <div className="space-y-2.5 bg-white p-2.5 rounded border border-slate-200">
+                <div className="font-bold text-slate-800 text-[11px] uppercase tracking-wider flex items-center justify-between">
+                  <span>Previous Contract / Baseline</span>
+                  <span className="text-[10px] text-slate-500 font-normal font-mono">{baselineDurationMonths}m term</span>
+                </div>
 
-              <ContractPeriodInput
-                label="Contract Time Period:"
-                period={baselineDate}
-                onChangePeriod={setBaselineDate}
-                durationMonths={contractDurationMonths}
-                onChangeDuration={setContractDurationMonths}
-                showDuration={true}
-              />
-
-              <div>
-                <label className="block text-[10px] text-slate-600 mb-0.5">Baseline Unit Price ({currency})</label>
-                <input
-                  type="number"
-                  step="any"
-                  required
-                  value={baselineUnitPrice}
-                  onChange={(e) => setBaselineUnitPrice(parseFloat(e.target.value) || 0)}
-                  className="w-full bg-slate-50 border border-slate-300 rounded px-2.5 py-1 text-xs text-slate-900 font-mono font-bold"
+                <ContractPeriodInput
+                  label="Contract Time Period:"
+                  period={baselineDate}
+                  onChangePeriod={setBaselineDate}
+                  durationMonths={baselineDurationMonths}
+                  onChangeDuration={setBaselineDurationMonths}
+                  showDuration={true}
+                  durationLabel="Previous Contract Term:"
                 />
+
+                <div>
+                  <label className="block text-[10px] text-slate-600 mb-0.5">Baseline Unit Price ({currency})</label>
+                  <input
+                    type="number"
+                    step="any"
+                    required
+                    value={baselineUnitPrice}
+                    onChange={(e) => setBaselineUnitPrice(parseFloat(e.target.value) || 0)}
+                    className="w-full bg-slate-50 border border-slate-300 rounded px-2.5 py-1 text-xs text-slate-900 font-mono font-bold"
+                  />
+                </div>
+                <div className="flex items-center justify-between text-[10px] text-slate-500 font-mono">
+                  <span>Total: SGD {(baselineUnitPrice * quantity * exchangeRate).toLocaleString()}</span>
+                  {baselineDurationMonths > 0 && (
+                    <span className="text-slate-400">
+                      SGD {((baselineUnitPrice * quantity * exchangeRate) / baselineDurationMonths).toLocaleString(undefined, { maximumFractionDigits: 0 })}/mo
+                    </span>
+                  )}
+                </div>
               </div>
-              <div className="text-[10px] text-slate-500 font-mono">
-                Total Baseline: SGD {(baselineUnitPrice * quantity * exchangeRate).toLocaleString()}
+
+              {/* Current Tender */}
+              <div className="space-y-2.5 bg-white p-2.5 rounded border border-slate-200">
+                <div className="font-bold text-slate-800 text-[11px] uppercase tracking-wider flex items-center justify-between">
+                  <span>Current Tender Submission</span>
+                  <span className="text-[10px] text-indigo-700 font-bold font-mono">{tenderDurationMonths}m term</span>
+                </div>
+
+                <ContractPeriodInput
+                  label="New Tender Submission Date:"
+                  period={tenderDate}
+                  onChangePeriod={setTenderDate}
+                  durationMonths={tenderDurationMonths}
+                  onChangeDuration={setTenderDurationMonths}
+                  showDuration={true}
+                  isTender={true}
+                  durationLabel="New Tender Contract Duration:"
+                />
+
+                <div>
+                  <label className="block text-[10px] text-slate-600 mb-0.5">Tender Unit Price ({currency})</label>
+                  <input
+                    type="number"
+                    step="any"
+                    required
+                    value={tenderUnitPrice}
+                    onChange={(e) => setTenderUnitPrice(parseFloat(e.target.value) || 0)}
+                    className="w-full bg-slate-50 border border-slate-300 rounded px-2.5 py-1 text-xs text-slate-900 font-mono font-bold"
+                  />
+                </div>
+                <div className="flex items-center justify-between text-[10px] text-slate-500 font-mono">
+                  <span>Total: SGD {(tenderUnitPrice * quantity * exchangeRate).toLocaleString()}</span>
+                  {tenderDurationMonths > 0 && (
+                    <span className="text-indigo-600 font-semibold">
+                      SGD {((tenderUnitPrice * quantity * exchangeRate) / tenderDurationMonths).toLocaleString(undefined, { maximumFractionDigits: 0 })}/mo
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
 
-            {/* Current Tender */}
-            <div className="space-y-2.5 bg-white p-2.5 rounded border border-slate-200">
-              <div className="font-bold text-slate-800 text-[11px] uppercase tracking-wider">
-                Current Tender Submission
+            {/* Contract Duration Scaling Factor Callout if Durations Differ */}
+            {baselineDurationMonths !== tenderDurationMonths && baselineDurationMonths > 0 && (
+              <div className="p-2.5 bg-indigo-50 border border-indigo-200 rounded-lg text-indigo-950 flex items-start gap-2 text-xs">
+                <Clock className="w-4 h-4 text-indigo-700 shrink-0 mt-0.5" />
+                <div className="space-y-0.5">
+                  <div className="font-bold flex items-center gap-1.5 text-xs text-indigo-900">
+                    <span>⏱️ New Contract Duration Factored into Benchmark Calculation</span>
+                    <span className="bg-indigo-200 text-indigo-900 px-1.5 py-0.2 rounded text-[10px] font-mono font-bold">
+                      {(tenderDurationMonths / baselineDurationMonths).toFixed(2)}× term multiplier
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-indigo-800 leading-relaxed">
+                    Previous contract was <strong>{baselineDurationMonths} months</strong>; New tender submission is for <strong>{tenderDurationMonths} months</strong>.
+                    The official index-adjusted baseline will be scaled by <strong>{(tenderDurationMonths / baselineDurationMonths).toFixed(2)}×</strong> to match the new tender term, ensuring like-for-like evaluation.
+                  </p>
+                </div>
               </div>
-
-              <ContractPeriodInput
-                label="Tender Submission Date:"
-                period={tenderDate}
-                onChangePeriod={setTenderDate}
-                isTender={true}
-              />
-
-              <div>
-                <label className="block text-[10px] text-slate-600 mb-0.5">Tender Unit Price ({currency})</label>
-                <input
-                  type="number"
-                  step="any"
-                  required
-                  value={tenderUnitPrice}
-                  onChange={(e) => setTenderUnitPrice(parseFloat(e.target.value) || 0)}
-                  className="w-full bg-slate-50 border border-slate-300 rounded px-2.5 py-1 text-xs text-slate-900 font-mono font-bold"
-                />
-              </div>
-              <div className="text-[10px] text-slate-500 font-mono">
-                Total Tender: SGD {(tenderUnitPrice * quantity * exchangeRate).toLocaleString()}
-              </div>
-            </div>
+            )}
           </div>
 
           {/* Benchmark Selection (for materials) */}
@@ -449,11 +493,27 @@ export const TenderItemModal: React.FC<TenderItemModalProps> = ({
                 onChange={(e) => setBenchmarkSeriesId(e.target.value)}
                 className="w-full bg-slate-50 border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 font-medium focus:bg-white focus:outline-hidden"
               >
-                {catalogue.map(cat => (
-                  <option key={cat.id} value={cat.id}>
-                    [{cat.publisher.split(' ')[0]}] {cat.title} ({cat.unit})
-                  </option>
-                ))}
+                <optgroup label="🌏 Asia-Pacific Regional Market Benchmarks (Preferred)">
+                  {catalogue.filter(c => c.isAsiaRegion || c.geographicScope === 'ASIA' || c.id.includes('-ASIA-')).map(cat => (
+                    <option key={cat.id} value={cat.id}>
+                      [{cat.publisher.split(' ')[0]}] {cat.title} ({cat.unit})
+                    </option>
+                  ))}
+                </optgroup>
+                <optgroup label="🌐 Global Market Clearing Prices (MCP, SGD-Normalised)">
+                  {catalogue.filter(c => c.isMcpBenchmark && !c.isAsiaRegion && !c.id.includes('-ASIA-')).map(cat => (
+                    <option key={cat.id} value={cat.id}>
+                      [{cat.publisher.split(' ')[0]}] {cat.title} ({cat.unit})
+                    </option>
+                  ))}
+                </optgroup>
+                <optgroup label="🇸🇬 Singapore Statutory Rates (BCA & SingStat)">
+                  {catalogue.filter(c => !c.isMcpBenchmark && !c.isAsiaRegion && !c.id.includes('-ASIA-')).map(cat => (
+                    <option key={cat.id} value={cat.id}>
+                      [{cat.publisher.split(' ')[0]}] {cat.title} ({cat.unit})
+                    </option>
+                  ))}
+                </optgroup>
               </select>
             </div>
           )}
@@ -540,8 +600,8 @@ export const TenderItemModal: React.FC<TenderItemModalProps> = ({
                   <label className="block text-[10px] text-slate-700 mb-0.5">Contract Duration (Months)</label>
                   <input
                     type="number"
-                    value={contractDurationMonths}
-                    onChange={(e) => setContractDurationMonths(parseInt(e.target.value, 10) || 12)}
+                    value={tenderDurationMonths}
+                    onChange={(e) => setTenderDurationMonths(parseInt(e.target.value, 10) || 12)}
                     className="w-full bg-white border border-slate-300 rounded px-2 py-1 text-xs font-mono"
                   />
                 </div>

@@ -8,7 +8,8 @@ import {
   AlertTriangle,
   CheckCircle2,
   ExternalLink,
-  Info
+  Info,
+  Clock
 } from 'lucide-react';
 import {
   AggregateComparison,
@@ -58,14 +59,20 @@ export const ProcurementReportView: React.FC<ProcurementReportViewProps> = ({
       'Original Currency',
       'FX Rate to SGD',
       'Baseline Period',
+      'Baseline Contract Duration (Months)',
       'Baseline Price (Orig)',
       'Baseline Total (SGD)',
+      'Baseline Monthly Rate (SGD)',
       'Tender Period',
+      'Tender Contract Duration (Months)',
       'Tender Price (Orig)',
       'Tender Total (SGD)',
+      'Tender Monthly Rate (SGD)',
+      'Duration Scaling Factor',
       'Benchmark Series ID',
       'Benchmark Index Factor',
       'Index Adjusted Benchmark (SGD)',
+      'Benchmark Monthly Rate (SGD)',
       'Variance (SGD)',
       'Variance (%)',
       'CAGR (%)',
@@ -89,14 +96,20 @@ export const ProcurementReportView: React.FC<ProcurementReportViewProps> = ({
         sanitizeCsvField(item.currency),
         sanitizeCsvField(item.exchangeRateToSgd),
         sanitizeCsvField(item.baselinePriceDate),
+        sanitizeCsvField(item.baselineContractDurationMonths || res?.trace?.baselineDurationMonths || 12),
         sanitizeCsvField(item.baselineTotalPrice),
         sanitizeCsvField(res ? res.baselineCostSgd : 0),
+        sanitizeCsvField(res?.trace?.baselineMonthlyRateSgd || ''),
         sanitizeCsvField(item.tenderPriceDate),
+        sanitizeCsvField(item.tenderContractDurationMonths || res?.trace?.tenderDurationMonths || 12),
         sanitizeCsvField(item.tenderTotalPrice),
         sanitizeCsvField(res ? res.tenderCostSgd : 0),
+        sanitizeCsvField(res?.trace?.tenderMonthlyRateSgd || ''),
+        sanitizeCsvField(res?.trace?.durationRatio ? res.trace.durationRatio.toFixed(4) : '1.0000'),
         sanitizeCsvField(item.overrideBenchmarkSeriesId || item.benchmarkSeriesId),
         sanitizeCsvField(res ? res.trace?.indexFactor.toFixed(4) : 1),
         sanitizeCsvField(res ? res.benchmarkCostSgd : 0),
+        sanitizeCsvField(res?.trace?.benchmarkMonthlyRateSgd || ''),
         sanitizeCsvField(res ? res.varianceSgd : 0),
         sanitizeCsvField(res ? res.variancePercent : 0),
         sanitizeCsvField(res ? res.trace?.cagrPercent : 0),
@@ -330,13 +343,29 @@ export const ProcurementReportView: React.FC<ProcurementReportViewProps> = ({
                         <div className="text-[11px] text-slate-500 truncate max-w-xs">{item.description}</div>
                       </td>
                       <td className="py-2 px-3 font-medium">{item.tendererName}</td>
-                      <td className="py-2 px-3 text-right font-mono">SGD {res?.baselineCostSgd.toLocaleString()}</td>
-                      <td className="py-2 px-3 text-right font-mono font-bold">SGD {res?.tenderCostSgd.toLocaleString()}</td>
+                      <td className="py-2 px-3 text-right font-mono">
+                        <div>SGD {res?.baselineCostSgd.toLocaleString()}</div>
+                        <div className="text-[10px] text-slate-400">
+                          {item.baselinePriceDate} {item.baselineContractDurationMonths ? `(${item.baselineContractDurationMonths}m)` : ''}
+                        </div>
+                      </td>
+                      <td className="py-2 px-3 text-right font-mono font-bold">
+                        <div>SGD {res?.tenderCostSgd.toLocaleString()}</div>
+                        <div className="text-[10px] text-slate-500 font-normal">
+                          {item.tenderPriceDate} {item.tenderContractDurationMonths ? `(${item.tenderContractDurationMonths}m)` : ''}
+                        </div>
+                      </td>
                       <td className="py-2 px-3 text-[11px] text-slate-600 truncate max-w-[140px]">
                         {item.overrideBenchmarkSeriesId || item.benchmarkSeriesId}
                       </td>
                       <td className="py-2 px-3 text-right font-mono text-blue-900 font-semibold">
-                        SGD {res?.benchmarkCostSgd.toLocaleString()}
+                        <div>SGD {res?.benchmarkCostSgd.toLocaleString()}</div>
+                        {res?.trace?.isDurationAdjusted && (
+                          <div className="text-[9.5px] text-indigo-700 flex items-center justify-end gap-0.5">
+                            <Clock className="w-2.5 h-2.5" />
+                            <span>{res?.trace?.durationRatio?.toFixed(2)}× term</span>
+                          </div>
+                        )}
                       </td>
                       <td className={`py-2 px-3 text-right font-mono font-bold ${isOver ? 'text-rose-700' : 'text-emerald-700'}`}>
                         {isOver ? '+' : ''}SGD {res?.varianceSgd.toLocaleString()}

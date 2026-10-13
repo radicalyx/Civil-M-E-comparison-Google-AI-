@@ -44,6 +44,55 @@ export function calculateElapsedYears(startPeriod: string, endPeriod: string): n
   return diff > 0.05 ? diff : 1.0; // Avoid division by near-zero
 }
 
+export interface DurationNormalizationResult {
+  baselineDurationMonths?: number;
+  tenderDurationMonths?: number;
+  durationRatio: number;
+  isDurationAdjusted: boolean;
+  baselineMonthlyRateSgd?: number;
+  tenderMonthlyRateSgd?: number;
+}
+
+/**
+ * Resolves contract durations across previous baseline contract and new tender submission.
+ * Enables like-for-like term scaling when tender duration differs from baseline duration.
+ */
+export function resolveContractDuration(
+  item: TenderLineItem,
+  baselineCostSgd: number,
+  tenderCostSgd: number
+): DurationNormalizationResult {
+  const bDur = (item.baselineContractDurationMonths && item.baselineContractDurationMonths > 0)
+    ? item.baselineContractDurationMonths
+    : (item.contractDurationMonths && item.contractDurationMonths > 0 ? item.contractDurationMonths : undefined);
+
+  const tDur = (item.tenderContractDurationMonths && item.tenderContractDurationMonths > 0)
+    ? item.tenderContractDurationMonths
+    : (item.contractDurationMonths && item.contractDurationMonths > 0 ? item.contractDurationMonths : undefined);
+
+  if (bDur && tDur && bDur > 0 && tDur > 0) {
+    const durationRatio = Number((tDur / bDur).toFixed(4));
+    const isDurationAdjusted = Math.abs(durationRatio - 1.0) > 0.001;
+    return {
+      baselineDurationMonths: bDur,
+      tenderDurationMonths: tDur,
+      durationRatio,
+      isDurationAdjusted,
+      baselineMonthlyRateSgd: Number((baselineCostSgd / bDur).toFixed(2)),
+      tenderMonthlyRateSgd: Number((tenderCostSgd / tDur).toFixed(2))
+    };
+  }
+
+  return {
+    baselineDurationMonths: bDur,
+    tenderDurationMonths: tDur,
+    durationRatio: 1.0,
+    isDurationAdjusted: false,
+    baselineMonthlyRateSgd: bDur ? Number((baselineCostSgd / bDur).toFixed(2)) : undefined,
+    tenderMonthlyRateSgd: tDur ? Number((tenderCostSgd / tDur).toFixed(2)) : undefined
+  };
+}
+
 /**
  * Find the closest observation value for a given series and period code.
  * Intelligently normalizes dates (e.g. "2024-05", "2025-01-15", "May 2024" -> "2024M05").
@@ -192,20 +241,27 @@ export function calculateItemBenchmark(
     };
   }
 
+  const durationNorm = resolveContractDuration(item, baselineCostSgd, tenderCostSgd);
   const baselineIndex = baselineLookup.value;
   const currentIndex = tenderLookup.value;
   const indexFactor = currentIndex / baselineIndex;
   const indexChangePercent = (indexFactor - 1) * 100;
 
-  const benchmarkCostSgd = Number((baselineCostSgd * indexFactor).toFixed(2));
+  // Escalated price benchmark factored by contract duration ratio (Tender Duration / Baseline Duration)
+  const escalatedBaselineTermCost = baselineCostSgd * indexFactor;
+  const benchmarkCostSgd = Number((escalatedBaselineTermCost * durationNorm.durationRatio).toFixed(2));
+  const benchmarkMonthlyRateSgd = durationNorm.tenderDurationMonths
+    ? Number((benchmarkCostSgd / durationNorm.tenderDurationMonths).toFixed(2))
+    : (durationNorm.baselineDurationMonths ? Number((escalatedBaselineTermCost / durationNorm.baselineDurationMonths).toFixed(2)) : undefined);
+
   const varianceSgd = Number((tenderCostSgd - benchmarkCostSgd).toFixed(2));
   const variancePercent = benchmarkCostSgd > 0 ? Number((((tenderCostSgd / benchmarkCostSgd) - 1) * 100).toFixed(2)) : 0;
-  const tenderChangePercent = baselineCostSgd > 0 ? Number((((tenderCostSgd / baselineCostSgd) - 1) * 100).toFixed(2)) : 0;
+  const tenderChangePercent = baselineCostSgd > 0 ? Number((((tenderCostSgd / (baselineCostSgd * durationNorm.durationRatio)) - 1) * 100).toFixed(2)) : 0;
   const escalationDifferencePp = Number((tenderChangePercent - indexChangePercent).toFixed(2));
 
   const elapsedYears = calculateElapsedYears(item.baselinePriceDate, item.tenderPriceDate);
   const cagrPercent = (baselineCostSgd > 0 && tenderCostSgd > 0 && elapsedYears > 0)
-    ? Number(((Math.pow(tenderCostSgd / baselineCostSgd, 1 / elapsedYears) - 1) * 100).toFixed(2))
+    ? Number(((Math.pow(tenderCostSgd / (baselineCostSgd * durationNorm.durationRatio), 1 / elapsedYears) - 1) * 100).toFixed(2))
     : 0;
 
   let warning: string | undefined;
@@ -218,7 +274,14 @@ export function calculateItemBenchmark(
 
   const isMcpActive = !!seriesMeta?.isMcpBenchmark || !!tenderLookup.isProvisional;
   if (isMcpActive) {
-    warning = (warning ? `${warning} | ` : '') + `🌐 Global MCP Benchmark Active: SingStat/BCA statistics lack current date prices. Price comparison uses Global Market Clearing Prices normalised to SGD.`;
+    const isAsia = seriesMeta?.isAsiaRegion || seriesMeta?.geographicScope === 'ASIA' || seriesMeta?.id.includes('-ASIA-');
+    warning = (warning ? `${warning} | ` : '') + (isAsia
+      ? `🌏 Asia-Pacific Regional MCP Active: Price comparison uses Asia/ASEAN regional market clearing rates normalised to SGD.`
+      : `🌐 Global MCP Benchmark Active: SingStat/BCA statistics lack current date prices. Price comparison uses Global Market Clearing Prices normalised to SGD.`);
+  }
+
+  if (durationNorm.isDurationAdjusted) {
+    warning = (warning ? `${warning} | ` : '') + `⏱️ Contract Duration Scaled: Previous term was ${durationNorm.baselineDurationMonths} months; Tender submission term is ${durationNorm.tenderDurationMonths} months (${durationNorm.durationRatio.toFixed(2)}× duration scaling). Benchmark scales to match new tender term.`;
   }
 
   return {
@@ -248,6 +311,13 @@ export function calculateItemBenchmark(
       variancePercent,
       cagrPercent,
       elapsedYears,
+      baselineDurationMonths: durationNorm.baselineDurationMonths,
+      tenderDurationMonths: durationNorm.tenderDurationMonths,
+      durationRatio: durationNorm.durationRatio,
+      isDurationAdjusted: durationNorm.isDurationAdjusted,
+      baselineMonthlyRateSgd: durationNorm.baselineMonthlyRateSgd,
+      tenderMonthlyRateSgd: durationNorm.tenderMonthlyRateSgd,
+      benchmarkMonthlyRateSgd,
       isMcpBridged: isMcpActive,
       mcpSourceDetails: isMcpActive ? {
         globalSource: seriesMeta?.globalSourceBenchmark || 'Global Market Clearing Price (LME / Platts)',
@@ -257,9 +327,13 @@ export function calculateItemBenchmark(
         note: 'Statutory SingStat/BCA data unavailable for current date. Using Global Market Clearing Prices normalised to SGD.'
       } : undefined,
       formulasUsed: {
-        benchmarkFormula: 'Index-Adjusted Benchmark = Baseline Cost SGD × (Current Index / Baseline Index)',
+        benchmarkFormula: durationNorm.isDurationAdjusted
+          ? `Duration-Scaled Benchmark = Baseline Cost SGD × (Current Index / Baseline Index) × (Tender Term ${durationNorm.tenderDurationMonths}m / Baseline Term ${durationNorm.baselineDurationMonths}m)`
+          : 'Index-Adjusted Benchmark = Baseline Cost SGD × (Current Index / Baseline Index)',
         varianceFormula: 'Variance SGD = Tender Cost SGD - Benchmark Cost SGD; Variance % = (Tender / Benchmark - 1) × 100',
-        substitutedValues: `Benchmark = SGD ${baselineCostSgd.toLocaleString()} × (${currentIndex} / ${baselineIndex}) = SGD ${benchmarkCostSgd.toLocaleString()}`
+        substitutedValues: durationNorm.isDurationAdjusted
+          ? `Benchmark = SGD ${baselineCostSgd.toLocaleString()} × (${currentIndex} / ${baselineIndex}) × (${durationNorm.tenderDurationMonths} / ${durationNorm.baselineDurationMonths}) = SGD ${benchmarkCostSgd.toLocaleString()} (SGD ${benchmarkMonthlyRateSgd?.toLocaleString()}/mo)`
+          : `Benchmark = SGD ${baselineCostSgd.toLocaleString()} × (${currentIndex} / ${baselineIndex}) = SGD ${benchmarkCostSgd.toLocaleString()}`
       }
     }
   };
@@ -314,17 +388,28 @@ function calculateCompositeMeItem(
     compositeFactor = 1.0;
   }
 
-  const benchmarkCostSgd = Number((baselineCostSgd * compositeFactor).toFixed(2));
+  const durationNorm = resolveContractDuration(item, baselineCostSgd, tenderCostSgd);
+  const escalatedTermBaseline = baselineCostSgd * compositeFactor;
+  const benchmarkCostSgd = Number((escalatedTermBaseline * durationNorm.durationRatio).toFixed(2));
+  const benchmarkMonthlyRateSgd = durationNorm.tenderDurationMonths
+    ? Number((benchmarkCostSgd / durationNorm.tenderDurationMonths).toFixed(2))
+    : (durationNorm.baselineDurationMonths ? Number((escalatedTermBaseline / durationNorm.baselineDurationMonths).toFixed(2)) : undefined);
+
   const varianceSgd = Number((tenderCostSgd - benchmarkCostSgd).toFixed(2));
   const variancePercent = benchmarkCostSgd > 0 ? Number((((tenderCostSgd / benchmarkCostSgd) - 1) * 100).toFixed(2)) : 0;
-  const tenderChangePercent = baselineCostSgd > 0 ? Number((((tenderCostSgd / baselineCostSgd) - 1) * 100).toFixed(2)) : 0;
+  const tenderChangePercent = baselineCostSgd > 0 ? Number((((tenderCostSgd / (baselineCostSgd * durationNorm.durationRatio)) - 1) * 100).toFixed(2)) : 0;
   const indexChangePercent = Number(((compositeFactor - 1) * 100).toFixed(2));
   const escalationDifferencePp = Number((tenderChangePercent - indexChangePercent).toFixed(2));
 
   const elapsedYears = calculateElapsedYears(item.baselinePriceDate, item.tenderPriceDate);
   const cagrPercent = (baselineCostSgd > 0 && tenderCostSgd > 0 && elapsedYears > 0)
-    ? Number(((Math.pow(tenderCostSgd / baselineCostSgd, 1 / elapsedYears) - 1) * 100).toFixed(2))
+    ? Number(((Math.pow(tenderCostSgd / (baselineCostSgd * durationNorm.durationRatio), 1 / elapsedYears) - 1) * 100).toFixed(2))
     : 0;
+
+  let warning: string | undefined = !isWeightValid ? `Composite weights total ${totalWeight}% (Normalized to 100%).` : undefined;
+  if (durationNorm.isDurationAdjusted) {
+    warning = (warning ? `${warning} | ` : '') + `⏱️ Contract Duration Scaled: Previous term was ${durationNorm.baselineDurationMonths} months; Tender submission term is ${durationNorm.tenderDurationMonths} months (${durationNorm.durationRatio.toFixed(2)}× duration scaling). Benchmark scales to match new tender term.`;
+  }
 
   return {
     benchmarkCostSgd,
@@ -336,7 +421,7 @@ function calculateCompositeMeItem(
     indexChangePercent,
     escalationDifferencePp,
     hasValidBenchmark: true,
-    benchmarkWarning: !isWeightValid ? `Composite weights total ${totalWeight}% (Normalized to 100%).` : undefined,
+    benchmarkWarning: warning,
     trace: {
       itemId: item.id,
       itemDescription: item.description,
@@ -353,6 +438,13 @@ function calculateCompositeMeItem(
       variancePercent,
       cagrPercent,
       elapsedYears,
+      baselineDurationMonths: durationNorm.baselineDurationMonths,
+      tenderDurationMonths: durationNorm.tenderDurationMonths,
+      durationRatio: durationNorm.durationRatio,
+      isDurationAdjusted: durationNorm.isDurationAdjusted,
+      baselineMonthlyRateSgd: durationNorm.baselineMonthlyRateSgd,
+      tenderMonthlyRateSgd: durationNorm.tenderMonthlyRateSgd,
+      benchmarkMonthlyRateSgd,
       isMcpBridged: weights.some(comp => comp.seriesId.startsWith('MCP-')),
       mcpSourceDetails: weights.some(comp => comp.seriesId.startsWith('MCP-')) ? {
         globalSource: 'Global Market Clearing Prices (LME / US BLS / World Bank)',
@@ -365,9 +457,13 @@ function calculateCompositeMeItem(
         compositeComponents: breakdownComponents
       },
       formulasUsed: {
-        benchmarkFormula: 'Composite Benchmark = Baseline Cost SGD × Σ [Component Weight × (Current Index / Baseline Index)]',
+        benchmarkFormula: durationNorm.isDurationAdjusted
+          ? `Duration-Scaled Composite = Baseline Cost SGD × Σ [Component Weight × Index Ratio] × (Tender Term ${durationNorm.tenderDurationMonths}m / Baseline Term ${durationNorm.baselineDurationMonths}m)`
+          : 'Composite Benchmark = Baseline Cost SGD × Σ [Component Weight × (Current Index / Baseline Index)]',
         varianceFormula: 'Variance SGD = Tender Cost SGD - Composite Benchmark SGD',
-        substitutedValues: `Composite Factor = ${compositeFactor.toFixed(4)}; Benchmark = SGD ${baselineCostSgd.toLocaleString()} × ${compositeFactor.toFixed(4)} = SGD ${benchmarkCostSgd.toLocaleString()}`
+        substitutedValues: durationNorm.isDurationAdjusted
+          ? `Composite Factor = ${compositeFactor.toFixed(4)}; Duration Ratio = ${durationNorm.durationRatio.toFixed(2)}×; Benchmark = SGD ${baselineCostSgd.toLocaleString()} × ${compositeFactor.toFixed(4)} × ${durationNorm.durationRatio.toFixed(2)} = SGD ${benchmarkCostSgd.toLocaleString()} (SGD ${benchmarkMonthlyRateSgd?.toLocaleString()}/mo)`
+          : `Composite Factor = ${compositeFactor.toFixed(4)}; Benchmark = SGD ${baselineCostSgd.toLocaleString()} × ${compositeFactor.toFixed(4)} = SGD ${benchmarkCostSgd.toLocaleString()}`
       }
     }
   };
@@ -410,19 +506,30 @@ function calculateMaintenanceItem(
   const adjustedLabourSgd = Number((baselineLabourSgd * labourIndexFactor).toFixed(2));
   const adjustedNonLabourSgd = Number((baselineNonLabourSgd * nonLabourFactor).toFixed(2));
 
-  const benchmarkCostSgd = Number((adjustedLabourSgd + adjustedNonLabourSgd).toFixed(2));
+  const durationNorm = resolveContractDuration(item, baselineCostSgd, tenderCostSgd);
+  const baselineTermEscalated = adjustedLabourSgd + adjustedNonLabourSgd;
+  const benchmarkCostSgd = Number((baselineTermEscalated * durationNorm.durationRatio).toFixed(2));
+  const benchmarkMonthlyRateSgd = durationNorm.tenderDurationMonths
+    ? Number((benchmarkCostSgd / durationNorm.tenderDurationMonths).toFixed(2))
+    : (durationNorm.baselineDurationMonths ? Number((baselineTermEscalated / durationNorm.baselineDurationMonths).toFixed(2)) : undefined);
+
   const varianceSgd = Number((tenderCostSgd - benchmarkCostSgd).toFixed(2));
   const variancePercent = benchmarkCostSgd > 0 ? Number((((tenderCostSgd / benchmarkCostSgd) - 1) * 100).toFixed(2)) : 0;
-  const tenderChangePercent = baselineCostSgd > 0 ? Number((((tenderCostSgd / baselineCostSgd) - 1) * 100).toFixed(2)) : 0;
+  const tenderChangePercent = baselineCostSgd > 0 ? Number((((tenderCostSgd / (baselineCostSgd * durationNorm.durationRatio)) - 1) * 100).toFixed(2)) : 0;
 
-  const effectiveContractIndexFactor = baselineCostSgd > 0 ? benchmarkCostSgd / baselineCostSgd : 1.0;
+  const effectiveContractIndexFactor = baselineCostSgd > 0 ? (baselineTermEscalated / baselineCostSgd) : 1.0;
   const indexChangePercent = Number(((effectiveContractIndexFactor - 1) * 100).toFixed(2));
   const escalationDifferencePp = Number((tenderChangePercent - indexChangePercent).toFixed(2));
 
   const elapsedYears = calculateElapsedYears(item.baselinePriceDate, item.tenderPriceDate);
   const cagrPercent = (baselineCostSgd > 0 && tenderCostSgd > 0 && elapsedYears > 0)
-    ? Number(((Math.pow(tenderCostSgd / baselineCostSgd, 1 / elapsedYears) - 1) * 100).toFixed(2))
+    ? Number(((Math.pow(tenderCostSgd / (baselineCostSgd * durationNorm.durationRatio), 1 / elapsedYears) - 1) * 100).toFixed(2))
     : 0;
+
+  let warning = `Labour share: ${(labourShare * 100).toFixed(0)}% (escalated via ${labourSeriesId}); Non-labour: ${(nonLabourShare * 100).toFixed(0)}% (held fixed at factor ${nonLabourFactor}).`;
+  if (durationNorm.isDurationAdjusted) {
+    warning += ` | ⏱️ Contract Duration Scaled: Previous term was ${durationNorm.baselineDurationMonths} months; Tender submission term is ${durationNorm.tenderDurationMonths} months (${durationNorm.durationRatio.toFixed(2)}× duration scaling). Benchmark scales to match new tender term.`;
+  }
 
   return {
     benchmarkCostSgd,
@@ -434,7 +541,7 @@ function calculateMaintenanceItem(
     indexChangePercent,
     escalationDifferencePp,
     hasValidBenchmark: true,
-    benchmarkWarning: `Labour share: ${(labourShare * 100).toFixed(0)}% (escalated via ${labourSeriesId}); Non-labour: ${(nonLabourShare * 100).toFixed(0)}% (held fixed at factor ${nonLabourFactor}).`,
+    benchmarkWarning: warning,
     trace: {
       itemId: item.id,
       itemDescription: item.description,
@@ -451,6 +558,13 @@ function calculateMaintenanceItem(
       variancePercent,
       cagrPercent,
       elapsedYears,
+      baselineDurationMonths: durationNorm.baselineDurationMonths,
+      tenderDurationMonths: durationNorm.tenderDurationMonths,
+      durationRatio: durationNorm.durationRatio,
+      isDurationAdjusted: durationNorm.isDurationAdjusted,
+      baselineMonthlyRateSgd: durationNorm.baselineMonthlyRateSgd,
+      tenderMonthlyRateSgd: durationNorm.tenderMonthlyRateSgd,
+      benchmarkMonthlyRateSgd,
       isMcpBridged: labourSeriesId.startsWith('MCP-') || !!cLookup?.isProvisional,
       mcpSourceDetails: (labourSeriesId.startsWith('MCP-') || !!cLookup?.isProvisional) ? {
         globalSource: 'Engineering Maintenance & Technical Labour MCP',
@@ -467,9 +581,13 @@ function calculateMaintenanceItem(
         nonLabourAdjustedSgd: adjustedNonLabourSgd
       },
       formulasUsed: {
-        benchmarkFormula: 'Benchmark = (Baseline × Labour Share × Labour Index Factor) + (Baseline × Non-Labour Share × Non-Labour Factor)',
+        benchmarkFormula: durationNorm.isDurationAdjusted
+          ? `Duration-Scaled Maintenance Benchmark = [(Baseline × Labour Share × Labour Index) + (Baseline × Non-Labour Share)] × (Tender Term ${durationNorm.tenderDurationMonths}m / Baseline Term ${durationNorm.baselineDurationMonths}m)`
+          : 'Benchmark = (Baseline × Labour Share × Labour Index Factor) + (Baseline × Non-Labour Share × Non-Labour Factor)',
         varianceFormula: 'Variance SGD = Tender Cost SGD - Maintenance Benchmark SGD',
-        substitutedValues: `Labour: SGD ${baselineLabourSgd.toLocaleString()} × ${labourIndexFactor.toFixed(4)} = SGD ${adjustedLabourSgd.toLocaleString()} + Non-Labour: SGD ${adjustedNonLabourSgd.toLocaleString()} = Total Benchmark SGD ${benchmarkCostSgd.toLocaleString()}`
+        substitutedValues: durationNorm.isDurationAdjusted
+          ? `Labour: SGD ${baselineLabourSgd.toLocaleString()} × ${labourIndexFactor.toFixed(4)} + Non-Labour: SGD ${adjustedNonLabourSgd.toLocaleString()} = 12m Term SGD ${baselineTermEscalated.toLocaleString()} × (${durationNorm.tenderDurationMonths}m / ${durationNorm.baselineDurationMonths}m) = Total Benchmark SGD ${benchmarkCostSgd.toLocaleString()} (SGD ${benchmarkMonthlyRateSgd?.toLocaleString()}/mo)`
+          : `Labour: SGD ${baselineLabourSgd.toLocaleString()} × ${labourIndexFactor.toFixed(4)} = SGD ${adjustedLabourSgd.toLocaleString()} + Non-Labour: SGD ${adjustedNonLabourSgd.toLocaleString()} = Total Benchmark SGD ${benchmarkCostSgd.toLocaleString()}`
       }
     }
   };

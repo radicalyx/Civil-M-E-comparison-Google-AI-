@@ -15,7 +15,8 @@ import {
   ChevronDown,
   ChevronUp,
   X,
-  Globe
+  Globe,
+  Clock
 } from 'lucide-react';
 import { CatalogueSeries, CompositeWeightItem, DataObservation, TenderLineItem } from '../types/index.ts';
 import { ME_TRADE_TEMPLATES } from '../server/catalogueData.ts';
@@ -54,23 +55,35 @@ export const MeSupplyInstallView: React.FC<MeSupplyInstallViewProps> = ({
   const meIndices = items.map((item, idx) => item.category === 'ME_TRADE' ? idx : -1).filter(idx => idx !== -1);
   const meResults = meIndices.map(idx => itemResults[idx]).filter(Boolean);
 
-  // M&E Series for graph and component mapping - filtered to updated current dates
-  const meSeries = catalogue.filter(c =>
-    (!onlyCurrentReferences || c.isUpdatedToCurrentDate !== false) &&
-    (
-      c.category === 'ME_EQUIPMENT' ||
-      c.id === 'MCP-GLOBAL-COPPER' ||
-      c.id === 'MCP-GLOBAL-ALUMINIUM' ||
-      c.id === 'MCP-GLOBAL-MAINTENANCE-LABOUR' ||
-      c.id === 'SINGSTAT-DSPI-DIV77-CABLE' ||
-      c.id === 'SINGSTAT-DSPI-DIV68-ALUM' ||
-      c.id === 'SINGSTAT-DSPI-DIV67' ||
-      c.id === 'SINGSTAT-DSPI-DIV66-NONMETALLIC' ||
-      c.id === 'SINGSTAT-ULC-CONST' ||
-      c.id === 'SINGSTAT-ULC-TOTAL' ||
-      c.id === 'MOM-WAGE-TECH-ME'
+  // M&E Series for graph and component mapping - filtered to updated current dates and sorted to favour Asia & Global data
+  const meSeries = catalogue
+    .filter(c =>
+      (!onlyCurrentReferences || c.isUpdatedToCurrentDate !== false) &&
+      (
+        c.category === 'ME_EQUIPMENT' ||
+        c.id.includes('COPPER') ||
+        c.id.includes('ALUMINIUM') ||
+        c.id.includes('ALUM') ||
+        c.id.includes('LABOUR') ||
+        c.id.includes('CABLE') ||
+        c.id.includes('DIV67') ||
+        c.id.includes('DIV74') ||
+        c.id.includes('DIV77') ||
+        c.id.includes('DIV71') ||
+        c.id.includes('ULC') ||
+        c.id.includes('MOM-WAGE')
+      )
     )
-  );
+    .sort((a, b) => {
+      const getPriority = (s: CatalogueSeries) => {
+        if (s.isAsiaRegion || s.geographicScope === 'ASIA' || s.id.includes('-ASIA-')) return 1;
+        if (s.isMcpBenchmark || s.geographicScope === 'GLOBAL' || s.id.includes('-GLOBAL-')) return 2;
+        return 3;
+      };
+      const diff = getPriority(a) - getPriority(b);
+      if (diff !== 0) return diff;
+      return a.title.localeCompare(b.title);
+    });
 
   // Dedicated M&E Totals (Evaluated Separately)
   const totalMeBaseline = meResults.reduce((sum, r) => sum + r.baselineCostSgd, 0);
@@ -79,16 +92,17 @@ export const MeSupplyInstallView: React.FC<MeSupplyInstallViewProps> = ({
   const meVarianceSgd = totalMeTender - totalMeBenchmark;
   const meVariancePct = totalMeBenchmark > 0 ? ((totalMeTender / totalMeBenchmark) - 1) * 100 : 0;
 
-  // Layman Quick M&E Checker State
+  // Layman Quick M&E Checker State - Defaults to Asia Regional Benchmark (Favoured)
   const [quickTrade, setQuickTrade] = useState('ACMV');
-  const [selectedChartSeriesId, setSelectedChartSeriesId] = useState('SINGSTAT-IPI-DIV74-PUMPS');
+  const [selectedChartSeriesId, setSelectedChartSeriesId] = useState('MCP-ASIA-ME-EQUIPMENT');
   const [quickTenderer, setQuickTenderer] = useState('');
   const [quickDesc, setQuickDesc] = useState('Chiller Plant & AHU Replacement');
   const [quickPrevPrice, setQuickPrevPrice] = useState(680000);
   const [quickPrevDate, setQuickPrevDate] = useState('2021M01');
   const [quickPrevDuration, setQuickPrevDuration] = useState(24);
   const [quickNewPrice, setQuickNewPrice] = useState(845000);
-  const [quickNewDate, setQuickNewDate] = useState('2024M06');
+  const [quickNewDate, setQuickNewDate] = useState('2026M03');
+  const [quickNewDuration, setQuickNewDuration] = useState(24);
 
   // Trade template defaults
   const currentTemplate = ME_TRADE_TEMPLATES[quickTrade] || ME_TRADE_TEMPLATES['ACMV'];
@@ -263,8 +277,11 @@ export const MeSupplyInstallView: React.FC<MeSupplyInstallViewProps> = ({
     baselineUnitPrice: quickPrevPrice,
     baselineTotalPrice: quickPrevPrice,
     tenderPriceDate: quickNewDate,
+    tenderContractDurationMonths: quickNewDuration,
+    tenderContractPeriodLabel: `${quickNewDate} (${quickNewDuration} mos contract term)`,
     tenderUnitPrice: quickNewPrice,
     tenderTotalPrice: quickNewPrice,
+    contractDurationMonths: quickNewDuration,
     benchmarkSeriesId: 'COMPOSITE_' + quickTrade,
     customCompositeWeights: quickWeights
   };
@@ -279,7 +296,10 @@ export const MeSupplyInstallView: React.FC<MeSupplyInstallViewProps> = ({
       tendererName: quickTenderer.trim() || 'Specialist Contractor',
       itemCode: 'ME-' + quickTrade + '-' + Math.floor(100 + Math.random() * 900),
       baselineContractDurationMonths: quickPrevDuration,
-      baselineContractPeriodLabel: `${quickPrevDate} (${quickPrevDuration} mos contract term)`
+      baselineContractPeriodLabel: `${quickPrevDate} (${quickPrevDuration} mos contract term)`,
+      tenderContractDurationMonths: quickNewDuration,
+      tenderContractPeriodLabel: `${quickNewDate} (${quickNewDuration} mos contract term)`,
+      contractDurationMonths: quickNewDuration
     };
     onAddItem(newItem);
     setQuickTenderer('');
@@ -379,7 +399,7 @@ export const MeSupplyInstallView: React.FC<MeSupplyInstallViewProps> = ({
       {/* DEDICATED PRICE INDEX GRAPH FOR M&E TAB */}
       <PriceIndexChart
         title="M&amp;E Equipment &amp; Trade Price Index Historical Trend"
-        subtitle="Visualise SingStat IPI capital equipment and DSPI material indices used in M&E trade composites"
+        subtitle="Visualise M&E equipment and trade indices with Asia-Pacific regional OEM machinery benchmarks favoured"
         availableSeries={meSeries}
         observationsMap={observationsMap}
         selectedSeriesId={selectedChartSeriesId}
@@ -558,7 +578,11 @@ export const MeSupplyInstallView: React.FC<MeSupplyInstallViewProps> = ({
                 label="New Tender Quote Submission Date:"
                 period={quickNewDate}
                 onChangePeriod={setQuickNewDate}
+                durationMonths={quickNewDuration}
+                onChangeDuration={setQuickNewDuration}
+                showDuration={true}
                 isTender={true}
+                durationLabel="New Tender Contract Duration:"
               />
 
               <div className="pt-1">
@@ -600,6 +624,15 @@ export const MeSupplyInstallView: React.FC<MeSupplyInstallViewProps> = ({
                   Composite benchmark: <strong>SGD {liveResult.benchmarkCostSgd.toLocaleString()}</strong>.
                   Factor: <strong>{liveResult.trace?.indexFactor.toFixed(4)}</strong> based on customized breakdown composition.
                 </div>
+
+                {liveResult.trace?.isDurationAdjusted && (
+                  <div className="mt-2 p-2 bg-indigo-100 rounded border border-indigo-300 text-[10px] text-indigo-950 flex items-start gap-1.5">
+                    <Clock className="w-3.5 h-3.5 text-indigo-700 shrink-0 mt-0.5" />
+                    <div>
+                      <span className="font-bold">⏱️ Duration Factored In ({liveResult.trace?.durationRatio?.toFixed(2)}×):</span> New tender duration is <strong>{liveResult.trace?.tenderDurationMonths} months</strong> vs <strong>{liveResult.trace?.baselineDurationMonths} months</strong> in previous contract. Benchmark scaled to match new tender term (SGD {liveResult.trace?.benchmarkMonthlyRateSgd?.toLocaleString()}/mo benchmark vs SGD {liveResult.trace?.tenderMonthlyRateSgd?.toLocaleString()}/mo tender).
+                    </div>
+                  </div>
+                )}
 
                 {liveResult.trace?.isMcpBridged && (
                   <div className="mt-2 p-2 bg-sky-100 rounded border border-sky-300 text-[10px] text-sky-950 flex items-start gap-1.5">
@@ -903,12 +936,21 @@ export const MeSupplyInstallView: React.FC<MeSupplyInstallViewProps> = ({
                         <div className="font-semibold text-slate-900">
                           SGD {result?.baselineCostSgd.toLocaleString()}
                         </div>
-                        <div className="text-[10px] text-slate-400">{item.baselinePriceDate}</div>
+                        <div className="text-[10px] text-slate-400">
+                          {item.baselinePriceDate} {item.baselineContractDurationMonths ? `(${item.baselineContractDurationMonths}m)` : ''}
+                        </div>
                       </td>
 
                       <td className="py-3 px-3 text-right font-mono font-bold text-slate-900">
                         <div>SGD {result?.tenderCostSgd.toLocaleString()}</div>
-                        <div className="text-[10px] text-slate-400">{item.tenderPriceDate}</div>
+                        <div className="flex items-center justify-end gap-1 text-[10px]">
+                          <span className="text-slate-400">{item.tenderPriceDate}</span>
+                          {item.tenderContractDurationMonths && (
+                            <span className="bg-indigo-50 text-indigo-700 px-1 rounded border border-indigo-200 text-[9.5px]">
+                              {item.tenderContractDurationMonths}m
+                            </span>
+                          )}
+                        </div>
                       </td>
 
                       <td className="py-3 px-3 text-right font-mono text-indigo-900 font-semibold">
@@ -916,6 +958,12 @@ export const MeSupplyInstallView: React.FC<MeSupplyInstallViewProps> = ({
                         <div className="text-[10px] text-indigo-600">
                           Factor: {result?.trace?.indexFactor.toFixed(3)}
                         </div>
+                        {result?.trace?.isDurationAdjusted && (
+                          <div className="text-[9.5px] text-indigo-700 font-sans font-semibold flex items-center justify-end gap-0.5" title={`Term scaled by ${result?.trace?.durationRatio?.toFixed(2)}x`}>
+                            <Clock className="w-2.5 h-2.5" />
+                            <span>{result?.trace?.durationRatio?.toFixed(2)}× term</span>
+                          </div>
+                        )}
                       </td>
 
                       <td className={`py-3 px-3 text-right font-mono font-bold ${

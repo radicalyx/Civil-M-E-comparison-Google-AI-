@@ -45,7 +45,9 @@ export interface CatalogueSeries {
   isUpdatedToCurrentDate?: boolean; // verified actively published and updated to current dates
   currencyStatus?: 'CURRENT' | 'OUTDATED';
   isMcpBenchmark?: boolean; // true if series draws global market clearing prices normalised to SGD
-  globalSourceBenchmark?: string; // e.g. "London Metal Exchange (LME)", "World Bank Pink Sheet", "US BLS Machinery"
+  geographicScope?: 'ASIA' | 'GLOBAL' | 'SINGAPORE'; // Geographic data coverage
+  isAsiaRegion?: boolean; // True if data is specifically measured for Asia / SE Asia / East Asia region
+  globalSourceBenchmark?: string; // e.g. "S&P Global Platts East Asia CFR", "London Metal Exchange (LME)", "World Bank Pink Sheet"
   globalCurrency?: string; // original currency before normalisation, e.g. "USD"
   usdToSgdFxRate?: number; // exchange rate used for SGD normalisation, e.g. 1.3410
   normalisationFormula?: string; // e.g. "Global Price (USD) * 1.3410 = SGD Price"
@@ -102,7 +104,9 @@ export interface TenderLineItem {
   baselineTotalPrice: number; // baselineUnitPrice * quantity
 
   // Current Tender
-  tenderPriceDate: string; // e.g. "2024M06"
+  tenderPriceDate: string; // e.g. "2024M06", "2026M03"
+  tenderContractDurationMonths?: number; // e.g. 12, 24, 36 months
+  tenderContractPeriodLabel?: string;    // e.g. "Mar 2026 – Feb 2028 (24 Months)"
   tenderUnitPrice: number; // in original currency
   tenderTotalPrice: number; // tenderUnitPrice * quantity
 
@@ -140,6 +144,15 @@ export interface CalculationTrace {
   variancePercent: number;
   cagrPercent: number;
   elapsedYears: number;
+
+  // Contract Duration Normalization Details
+  baselineDurationMonths?: number;
+  tenderDurationMonths?: number;
+  durationRatio?: number;
+  isDurationAdjusted?: boolean;
+  baselineMonthlyRateSgd?: number;
+  tenderMonthlyRateSgd?: number;
+  benchmarkMonthlyRateSgd?: number;
 
   // Breakdown for M&E or Maintenance
   breakdownDetails?: {

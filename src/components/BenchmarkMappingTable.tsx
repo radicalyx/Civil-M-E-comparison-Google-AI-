@@ -27,10 +27,22 @@ export const BenchmarkMappingTable: React.FC<BenchmarkMappingTableProps> = ({
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
-  const [selectedChartSeriesId, setSelectedChartSeriesId] = useState<string>('SINGSTAT-DSPI-DIV67');
+  const [selectedGeoFilter, setSelectedGeoFilter] = useState<'ALL' | 'ASIA' | 'GLOBAL' | 'DOMESTIC'>('ALL');
+  const [selectedChartSeriesId, setSelectedChartSeriesId] = useState<string>('MCP-ASIA-STEEL-REBAR');
   const [onlyCurrentDates, setOnlyCurrentDates] = useState(true);
 
-  const filtered = catalogue.filter((series) => {
+  const sortedCatalogue = [...catalogue].sort((a, b) => {
+    const getPriority = (s: CatalogueSeries) => {
+      if (s.isAsiaRegion || s.geographicScope === 'ASIA' || s.id.includes('-ASIA-')) return 1;
+      if (s.isMcpBenchmark || s.geographicScope === 'GLOBAL' || s.id.includes('-GLOBAL-')) return 2;
+      return 3;
+    };
+    const diff = getPriority(a) - getPriority(b);
+    if (diff !== 0) return diff;
+    return a.title.localeCompare(b.title);
+  });
+
+  const filtered = sortedCatalogue.filter((series) => {
     const matchesSearch =
       series.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       series.publisher.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -40,7 +52,17 @@ export const BenchmarkMappingTable: React.FC<BenchmarkMappingTableProps> = ({
       selectedCategory === 'ALL' || series.category === selectedCategory;
     const matchesCurrency =
       !onlyCurrentDates || series.isUpdatedToCurrentDate !== false;
-    return matchesSearch && matchesCategory && matchesCurrency;
+
+    const isAsia = series.isAsiaRegion || series.geographicScope === 'ASIA' || series.id.includes('-ASIA-');
+    const isGlobal = !isAsia && (series.isMcpBenchmark || series.geographicScope === 'GLOBAL' || series.id.includes('-GLOBAL-'));
+    const isDomestic = !isAsia && !isGlobal;
+
+    let matchesGeo = true;
+    if (selectedGeoFilter === 'ASIA') matchesGeo = isAsia;
+    else if (selectedGeoFilter === 'GLOBAL') matchesGeo = isGlobal;
+    else if (selectedGeoFilter === 'DOMESTIC') matchesGeo = isDomestic;
+
+    return matchesSearch && matchesCategory && matchesCurrency && matchesGeo;
   });
 
   const getClassificationBadge = (classification: string) => {
@@ -86,10 +108,10 @@ export const BenchmarkMappingTable: React.FC<BenchmarkMappingTableProps> = ({
           </div>
           <div>
             <h2 className="text-base font-bold tracking-tight">
-              Official Price Indices &amp; Source Catalogue
+              Official Price Indices &amp; Benchmark Source Catalogue
             </h2>
             <p className="text-xs text-slate-300">
-              Direct verification links and methodologies for SingStat TableBuilder, BCA, MOM, and MAS series
+              Verified market benchmarks across Asia-Pacific Regional MCPs, Global clearing exchanges (LME, Platts, World Bank), and domestic SingStat/BCA series
             </p>
           </div>
         </div>
@@ -97,9 +119,9 @@ export const BenchmarkMappingTable: React.FC<BenchmarkMappingTableProps> = ({
 
       {/* INTERACTIVE PRICE INDEX CHART FOR BENCHMARKS */}
       <PriceIndexChart
-        title="Official Singapore Price Indices Comparison Chart"
-        subtitle="Explore verified historical time-series curves across all categories"
-        availableSeries={catalogue}
+        title="Price Indices &amp; Benchmark Curves Comparison Chart"
+        subtitle="Explore historical time-series curves with Asia-Pacific regional and global market clearing benchmarks favoured"
+        availableSeries={sortedCatalogue}
         observationsMap={observationsMap}
         selectedSeriesId={selectedChartSeriesId}
         onSelectSeriesId={setSelectedChartSeriesId}
@@ -120,6 +142,42 @@ export const BenchmarkMappingTable: React.FC<BenchmarkMappingTableProps> = ({
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          {/* Geo filter tabs */}
+          <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-lg text-xs font-semibold">
+            <button
+              onClick={() => setSelectedGeoFilter('ALL')}
+              className={`px-2.5 py-1 rounded text-[11px] transition cursor-pointer ${
+                selectedGeoFilter === 'ALL' ? 'bg-slate-800 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              All Sources
+            </button>
+            <button
+              onClick={() => setSelectedGeoFilter('ASIA')}
+              className={`px-2.5 py-1 rounded text-[11px] transition cursor-pointer flex items-center gap-1 ${
+                selectedGeoFilter === 'ASIA' ? 'bg-emerald-700 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <span>🌏 Asia (Favoured)</span>
+            </button>
+            <button
+              onClick={() => setSelectedGeoFilter('GLOBAL')}
+              className={`px-2.5 py-1 rounded text-[11px] transition cursor-pointer flex items-center gap-1 ${
+                selectedGeoFilter === 'GLOBAL' ? 'bg-blue-600 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <span>🌐 Global MCP</span>
+            </button>
+            <button
+              onClick={() => setSelectedGeoFilter('DOMESTIC')}
+              className={`px-2.5 py-1 rounded text-[11px] transition cursor-pointer ${
+                selectedGeoFilter === 'DOMESTIC' ? 'bg-slate-800 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <span>🇸🇬 SingStat / BCA</span>
+            </button>
+          </div>
+
           <button
             onClick={() => setOnlyCurrentDates(!onlyCurrentDates)}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-bold transition cursor-pointer border ${
@@ -129,7 +187,7 @@ export const BenchmarkMappingTable: React.FC<BenchmarkMappingTableProps> = ({
             }`}
           >
             <span className={`w-2 h-2 rounded-full ${onlyCurrentDates ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}`}></span>
-            <span>Only References Updated to Current Dates ({filtered.length})</span>
+            <span>Current Dates ({filtered.length})</span>
           </button>
 
           <select
@@ -170,10 +228,19 @@ export const BenchmarkMappingTable: React.FC<BenchmarkMappingTableProps> = ({
               </div>
 
               <div className="flex flex-wrap items-center gap-2">
-                {series.isMcpBenchmark && (
-                  <span className="inline-flex items-center gap-1 text-[10px] font-bold text-sky-800 bg-sky-50 border border-sky-300 px-2 py-0.5 rounded">
-                    <Globe className="w-3 h-3 text-sky-600" />
-                    <span>Global MCP (SGD-Normalised)</span>
+                {series.isAsiaRegion ? (
+                  <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-900 bg-emerald-100 border border-emerald-300 px-2 py-0.5 rounded">
+                    <Globe className="w-3 h-3 text-emerald-700" />
+                    <span>🌏 Asia Region Benchmark (Favoured)</span>
+                  </span>
+                ) : series.isMcpBenchmark ? (
+                  <span className="inline-flex items-center gap-1 text-[10px] font-bold text-sky-900 bg-sky-100 border border-sky-300 px-2 py-0.5 rounded">
+                    <Globe className="w-3 h-3 text-sky-700" />
+                    <span>🌐 Global MCP (SGD-Normalised)</span>
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-slate-600 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded">
+                    <span>🇸🇬 Domestic SingStat / BCA</span>
                   </span>
                 )}
                 <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded">

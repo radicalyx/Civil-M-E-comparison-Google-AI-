@@ -54,11 +54,22 @@ export const MaintenanceView: React.FC<MaintenanceViewProps> = ({
   const mntIndices = items.map((item, idx) => item.category === 'MAINTENANCE' ? idx : -1).filter(idx => idx !== -1);
   const mntResults = mntIndices.map(idx => itemResults[idx]).filter(Boolean);
 
-  // Labour series for graph - filtered to updated current dates
-  const labourSeries = catalogue.filter(c =>
-    c.category === 'LABOUR_MAINTENANCE' &&
-    (!onlyCurrentReferences || c.isUpdatedToCurrentDate !== false)
-  );
+  // Labour series for graph - filtered to updated current dates and sorted to favour Asia & Global data
+  const labourSeries = catalogue
+    .filter(c =>
+      c.category === 'LABOUR_MAINTENANCE' &&
+      (!onlyCurrentReferences || c.isUpdatedToCurrentDate !== false)
+    )
+    .sort((a, b) => {
+      const getPriority = (s: CatalogueSeries) => {
+        if (s.isAsiaRegion || s.geographicScope === 'ASIA' || s.id.includes('-ASIA-')) return 1;
+        if (s.isMcpBenchmark || s.geographicScope === 'GLOBAL' || s.id.includes('-GLOBAL-')) return 2;
+        return 3;
+      };
+      const diff = getPriority(a) - getPriority(b);
+      if (diff !== 0) return diff;
+      return a.title.localeCompare(b.title);
+    });
 
   // Dedicated Maintenance Totals (Evaluated Separately)
   const totalMntBaseline = mntResults.reduce((sum, r) => sum + r.baselineCostSgd, 0);
@@ -67,16 +78,17 @@ export const MaintenanceView: React.FC<MaintenanceViewProps> = ({
   const mntVarianceSgd = totalMntTender - totalMntBenchmark;
   const mntVariancePct = totalMntBenchmark > 0 ? ((totalMntTender / totalMntBenchmark) - 1) * 100 : 0;
 
-  // Layman Quick Maintenance Checker State
+  // Layman Quick Maintenance Checker State - Defaults to Asia Regional Labour Benchmark
   const [quickService, setQuickService] = useState('ACMV Servicing');
-  const [selectedChartSeriesId, setSelectedChartSeriesId] = useState('SINGSTAT-ULC-CONST');
+  const [selectedChartSeriesId, setSelectedChartSeriesId] = useState('MCP-ASIA-MAINTENANCE-LABOUR');
   const [quickTenderer, setQuickTenderer] = useState('');
-  const [quickDuration, setQuickDuration] = useState(12);
+  const [quickPrevDuration, setQuickPrevDuration] = useState(12);
+  const [quickNewDuration, setQuickNewDuration] = useState(12);
   const [quickLabourShare, setQuickLabourShare] = useState(70);
   const [quickPrevPrice, setQuickPrevPrice] = useState(100000);
-  const [quickPrevDate, setQuickPrevDate] = useState('2020Q1');
-  const [quickNewPrice, setQuickNewPrice] = useState(115000);
-  const [quickNewDate, setQuickNewDate] = useState('2021Q1');
+  const [quickPrevDate, setQuickPrevDate] = useState('2021M01');
+  const [quickNewPrice, setQuickNewPrice] = useState(122000);
+  const [quickNewDate, setQuickNewDate] = useState('2026M03');
 
   // Test item for live verdict
   const testItem: TenderLineItem = {
@@ -87,20 +99,22 @@ export const MaintenanceView: React.FC<MaintenanceViewProps> = ({
     description: quickService,
     specification: 'Routine scheduled maintenance servicing',
     quantity: 1,
-    unit: quickDuration + '-Month Contract',
+    unit: quickNewDuration + '-Month Contract',
     currency: 'SGD',
     exchangeRateToSgd: 1.0,
     gstBasis: 'EXCLUSIVE',
     baselinePriceDate: quickPrevDate,
-    baselineContractDurationMonths: quickDuration,
-    baselineContractPeriodLabel: `${quickPrevDate} (${quickDuration} mos contract term)`,
+    baselineContractDurationMonths: quickPrevDuration,
+    baselineContractPeriodLabel: `${quickPrevDate} (${quickPrevDuration} mos contract term)`,
     baselineUnitPrice: quickPrevPrice,
     baselineTotalPrice: quickPrevPrice,
     tenderPriceDate: quickNewDate,
+    tenderContractDurationMonths: quickNewDuration,
+    tenderContractPeriodLabel: `${quickNewDate} (${quickNewDuration} mos contract term)`,
     tenderUnitPrice: quickNewPrice,
     tenderTotalPrice: quickNewPrice,
     benchmarkSeriesId: selectedChartSeriesId,
-    contractDurationMonths: quickDuration,
+    contractDurationMonths: quickNewDuration,
     labourSharePercent: quickLabourShare,
     nonLabourEscalationFactor: 1.0
   };
@@ -114,8 +128,12 @@ export const MaintenanceView: React.FC<MaintenanceViewProps> = ({
       id: 'MNT-' + Date.now(),
       tendererName: quickTenderer.trim() || 'Facility Services Pte Ltd',
       itemCode: 'MNT-' + Math.floor(100 + Math.random() * 900),
-      baselineContractDurationMonths: quickDuration,
-      baselineContractPeriodLabel: `${quickPrevDate} (${quickDuration} mos contract term)`
+      baselineContractDurationMonths: quickPrevDuration,
+      baselineContractPeriodLabel: `${quickPrevDate} (${quickPrevDuration} mos contract term)`,
+      tenderContractDurationMonths: quickNewDuration,
+      tenderContractPeriodLabel: `${quickNewDate} (${quickNewDuration} mos contract term)`,
+      contractDurationMonths: quickNewDuration,
+      unit: quickNewDuration + '-Month Contract'
     };
     onAddItem(newItem);
     setQuickTenderer('');
@@ -193,7 +211,7 @@ export const MaintenanceView: React.FC<MaintenanceViewProps> = ({
       {/* DEDICATED PRICE INDEX GRAPH FOR MAINTENANCE LABOUR TAB */}
       <PriceIndexChart
         title="Construction Labour &amp; Technician Wage Index Trend"
-        subtitle="Visualise SingStat Unit Labour Cost Index (Table M183421) and MOM Occupational Technician Wage series"
+        subtitle="Visualise maintenance technician wage trends with ASEAN &amp; Asia-Pacific regional engineering benchmarks favoured"
         availableSeries={labourSeries}
         observationsMap={observationsMap}
         selectedSeriesId={selectedChartSeriesId}
@@ -243,8 +261,8 @@ export const MaintenanceView: React.FC<MaintenanceViewProps> = ({
                 <input
                   type="number"
                   min="1"
-                  value={quickDuration}
-                  onChange={(e) => setQuickDuration(parseInt(e.target.value, 10) || 12)}
+                  value={quickNewDuration}
+                  onChange={(e) => setQuickNewDuration(parseInt(e.target.value, 10) || 12)}
                   className="w-full bg-white border border-slate-300 rounded px-2 py-1 font-mono text-xs"
                 />
               </div>
@@ -294,9 +312,10 @@ export const MaintenanceView: React.FC<MaintenanceViewProps> = ({
                 label="Previous Contract Period:"
                 period={quickPrevDate}
                 onChangePeriod={setQuickPrevDate}
-                durationMonths={quickDuration}
-                onChangeDuration={setQuickDuration}
+                durationMonths={quickPrevDuration}
+                onChangeDuration={setQuickPrevDuration}
                 showDuration={true}
+                durationLabel="Previous Contract Term:"
               />
 
               <div className="pt-1">
@@ -317,7 +336,11 @@ export const MaintenanceView: React.FC<MaintenanceViewProps> = ({
                 label="New Renewal Quote Date:"
                 period={quickNewDate}
                 onChangePeriod={setQuickNewDate}
+                durationMonths={quickNewDuration}
+                onChangeDuration={setQuickNewDuration}
+                showDuration={true}
                 isTender={true}
+                durationLabel="New Renewal Contract Duration:"
               />
 
               <div className="pt-1">
@@ -359,6 +382,15 @@ export const MaintenanceView: React.FC<MaintenanceViewProps> = ({
                   Fair benchmark: <strong>SGD {liveResult.benchmarkCostSgd.toLocaleString()}</strong>.
                   (Labour component: SGD {liveResult.trace?.breakdownDetails?.labourAdjustedSgd?.toLocaleString()} + Spares: SGD {liveResult.trace?.breakdownDetails?.nonLabourAdjustedSgd?.toLocaleString()}).
                 </div>
+
+                {liveResult.trace?.isDurationAdjusted && (
+                  <div className="mt-2 p-2 bg-indigo-100 rounded border border-indigo-300 text-[10px] text-indigo-950 flex items-start gap-1.5">
+                    <Clock className="w-3.5 h-3.5 text-indigo-700 shrink-0 mt-0.5" />
+                    <div>
+                      <span className="font-bold">⏱️ Duration Factored In ({liveResult.trace?.durationRatio?.toFixed(2)}×):</span> New renewal duration is <strong>{liveResult.trace?.tenderDurationMonths} months</strong> vs <strong>{liveResult.trace?.baselineDurationMonths} months</strong> in previous contract. Benchmark scaled to match new term (SGD {liveResult.trace?.benchmarkMonthlyRateSgd?.toLocaleString()}/mo benchmark vs SGD {liveResult.trace?.tenderMonthlyRateSgd?.toLocaleString()}/mo tender).
+                    </div>
+                  </div>
+                )}
 
                 {liveResult.trace?.isMcpBridged && (
                   <div className="mt-2 p-2 bg-sky-100 rounded border border-sky-300 text-[10px] text-sky-950 flex items-start gap-1.5">
@@ -493,7 +525,10 @@ export const MaintenanceView: React.FC<MaintenanceViewProps> = ({
                       </td>
 
                       <td className="py-3 px-3 text-center font-mono">
-                        {item.contractDurationMonths || 12}M
+                        <div className="font-semibold text-slate-800">{item.tenderContractDurationMonths || item.contractDurationMonths || 12}M</div>
+                        {item.baselineContractDurationMonths && item.tenderContractDurationMonths && item.baselineContractDurationMonths !== item.tenderContractDurationMonths && (
+                          <div className="text-[9px] text-slate-400">was {item.baselineContractDurationMonths}M</div>
+                        )}
                       </td>
 
                       <td className="py-3 px-3 text-center font-mono font-semibold">
@@ -517,6 +552,12 @@ export const MaintenanceView: React.FC<MaintenanceViewProps> = ({
                         <div className="text-[10px] text-emerald-700">
                           Rise: {result?.indexChangePercent >= 0 ? '+' : ''}{result?.indexChangePercent.toFixed(1)}%
                         </div>
+                        {result?.trace?.isDurationAdjusted && (
+                          <div className="text-[9.5px] text-indigo-700 font-sans font-semibold flex items-center justify-end gap-0.5" title={`Term scaled by ${result?.trace?.durationRatio?.toFixed(2)}x`}>
+                            <Clock className="w-2.5 h-2.5" />
+                            <span>{result?.trace?.durationRatio?.toFixed(2)}× term</span>
+                          </div>
+                        )}
                       </td>
 
                       <td className={`py-3 px-3 text-right font-mono font-bold ${

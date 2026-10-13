@@ -15,7 +15,8 @@ import {
   ArrowRight,
   LineChart,
   Globe,
-  Sparkles
+  Sparkles,
+  Clock
 } from 'lucide-react';
 import { CatalogueSeries, DataObservation, TenderLineItem } from '../types/index.ts';
 import { calculateItemBenchmark, sanitizeCsvField } from '../utils/calculations.ts';
@@ -51,11 +52,22 @@ export const MaterialsView: React.FC<MaterialsViewProps> = ({
   const civilIndices = items.map((item, idx) => item.category === 'MATERIAL' ? idx : -1).filter(idx => idx !== -1);
   const civilResults = civilIndices.map(idx => itemResults[idx]).filter(Boolean);
 
-  // Civil Catalogue Series for chart - filtered to updated current dates
-  const civilSeries = catalogue.filter(c =>
-    c.category === 'CONSTRUCTION_MATERIALS' &&
-    (!onlyCurrentReferences || c.isUpdatedToCurrentDate !== false)
-  );
+  // Civil Catalogue Series for chart - filtered to updated current dates and sorted to favour Asia & Global data
+  const civilSeries = catalogue
+    .filter(c =>
+      c.category === 'CONSTRUCTION_MATERIALS' &&
+      (!onlyCurrentReferences || c.isUpdatedToCurrentDate !== false)
+    )
+    .sort((a, b) => {
+      const getPriority = (s: CatalogueSeries) => {
+        if (s.isAsiaRegion || s.geographicScope === 'ASIA' || s.id.includes('-ASIA-')) return 1;
+        if (s.isMcpBenchmark || s.geographicScope === 'GLOBAL' || s.id.includes('-GLOBAL-')) return 2;
+        return 3;
+      };
+      const diff = getPriority(a) - getPriority(b);
+      if (diff !== 0) return diff;
+      return a.title.localeCompare(b.title);
+    });
 
   // Dedicated Civil Totals
   const totalCivilBaseline = civilResults.reduce((sum, r) => sum + r.baselineCostSgd, 0);
@@ -64,16 +76,17 @@ export const MaterialsView: React.FC<MaterialsViewProps> = ({
   const civilVarianceSgd = totalCivilTender - totalCivilBenchmark;
   const civilVariancePct = totalCivilBenchmark > 0 ? ((totalCivilTender / totalCivilBenchmark) - 1) * 100 : 0;
 
-  // Layman Quick Check Form State
-  const [quickMaterial, setQuickMaterial] = useState('BCA-MAT-STEEL-REBAR');
-  const [selectedChartSeriesId, setSelectedChartSeriesId] = useState('BCA-MAT-STEEL-REBAR');
+  // Layman Quick Check Form State - Defaults to Asia Regional Benchmark (Favoured)
+  const [quickMaterial, setQuickMaterial] = useState('MCP-ASIA-STEEL-REBAR');
+  const [selectedChartSeriesId, setSelectedChartSeriesId] = useState('MCP-ASIA-STEEL-REBAR');
   const [quickTenderer, setQuickTenderer] = useState('');
   const [quickQty, setQuickQty] = useState(100);
-  const [quickPrevPrice, setQuickPrevPrice] = useState(880);
+  const [quickPrevPrice, setQuickPrevPrice] = useState(870);
   const [quickPrevDate, setQuickPrevDate] = useState('2021M01');
   const [quickPrevDuration, setQuickPrevDuration] = useState(12);
-  const [quickNewPrice, setQuickNewPrice] = useState(1040);
-  const [quickNewDate, setQuickNewDate] = useState('2024M06');
+  const [quickNewPrice, setQuickNewPrice] = useState(940);
+  const [quickNewDate, setQuickNewDate] = useState('2026M03');
+  const [quickNewDuration, setQuickNewDuration] = useState(12);
 
   // Compute live test verdict
   const testItem: TenderLineItem = {
@@ -89,11 +102,16 @@ export const MaterialsView: React.FC<MaterialsViewProps> = ({
     exchangeRateToSgd: 1.0,
     gstBasis: 'EXCLUSIVE',
     baselinePriceDate: quickPrevDate,
+    baselineContractDurationMonths: quickPrevDuration,
+    baselineContractPeriodLabel: `${quickPrevDate} (${quickPrevDuration} mos)`,
     baselineUnitPrice: quickPrevPrice,
     baselineTotalPrice: quickPrevPrice * quickQty,
     tenderPriceDate: quickNewDate,
+    tenderContractDurationMonths: quickNewDuration,
+    tenderContractPeriodLabel: `${quickNewDate} (${quickNewDuration} mos)`,
     tenderUnitPrice: quickNewPrice,
     tenderTotalPrice: quickNewPrice * quickQty,
+    contractDurationMonths: quickNewDuration,
     benchmarkSeriesId: quickMaterial
   };
 
@@ -115,11 +133,16 @@ export const MaterialsView: React.FC<MaterialsViewProps> = ({
       exchangeRateToSgd: 1.0,
       gstBasis: 'EXCLUSIVE',
       baselinePriceDate: quickPrevDate,
+      baselineContractDurationMonths: quickPrevDuration,
+      baselineContractPeriodLabel: `${quickPrevDate} (${quickPrevDuration} mos)`,
       baselineUnitPrice: quickPrevPrice,
       baselineTotalPrice: quickPrevPrice * quickQty,
       tenderPriceDate: quickNewDate,
+      tenderContractDurationMonths: quickNewDuration,
+      tenderContractPeriodLabel: `${quickNewDate} (${quickNewDuration} mos)`,
       tenderUnitPrice: quickNewPrice,
       tenderTotalPrice: quickNewPrice * quickQty,
+      contractDurationMonths: quickNewDuration,
       benchmarkSeriesId: quickMaterial
     };
     onAddItem(newItem);
@@ -203,8 +226,8 @@ export const MaterialsView: React.FC<MaterialsViewProps> = ({
 
       {/* DEDICATED PRICE INDEX GRAPH FOR CIVIL TAB */}
       <PriceIndexChart
-        title="Civil &amp; Structural Price Index Historical Trend"
-        subtitle="Visualise Singapore market movements for reinforcement steel, ready-mixed concrete, and structural steel"
+        title="Civil & Structural Price Index Historical Trend"
+        subtitle="Visualise market movements with Asia-Pacific regional benchmarks and Global MCPs favoured over domestic series"
         availableSeries={civilSeries}
         observationsMap={observationsMap}
         selectedSeriesId={selectedChartSeriesId}
@@ -230,7 +253,7 @@ export const MaterialsView: React.FC<MaterialsViewProps> = ({
           <div className="flex items-center gap-1.5 text-xs">
             <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-emerald-50 text-emerald-800 border border-emerald-200 text-[11px] font-semibold">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-              <span>References updated to current dates (SingStat / BCA)</span>
+              <span>Asia-Pacific Regional &amp; Global MCPs updated to 2026</span>
             </span>
           </div>
         </div>
@@ -249,7 +272,22 @@ export const MaterialsView: React.FC<MaterialsViewProps> = ({
                   const val = e.target.value;
                   setQuickMaterial(val);
                   setSelectedChartSeriesId(val);
-                  if (val.includes('REBAR')) {
+                  if (val === 'MCP-ASIA-STEEL-REBAR') {
+                    setQuickPrevPrice(870);
+                    setQuickNewPrice(940);
+                  } else if (val === 'MCP-ASIA-CONCRETE-G40') {
+                    setQuickPrevPrice(96);
+                    setQuickNewPrice(125.8);
+                  } else if (val === 'MCP-ASIA-COPPER') {
+                    setQuickPrevPrice(123);
+                    setQuickNewPrice(141.5);
+                  } else if (val === 'MCP-ASIA-ALUMINIUM') {
+                    setQuickPrevPrice(104);
+                    setQuickNewPrice(125.2);
+                  } else if (val === 'MCP-ASIA-STRUCTURAL-STEEL') {
+                    setQuickPrevPrice(116);
+                    setQuickNewPrice(127.8);
+                  } else if (val.includes('REBAR')) {
                     setQuickPrevPrice(880);
                     setQuickNewPrice(val.includes('MCP') ? 948 : 1040);
                   } else if (val.includes('CONCRETE')) {
@@ -274,15 +312,22 @@ export const MaterialsView: React.FC<MaterialsViewProps> = ({
                 }}
                 className="w-full bg-white border border-slate-300 rounded px-2.5 py-1.5 font-semibold text-slate-800 text-xs focus:ring-1 focus:ring-blue-600 focus:outline-hidden"
               >
-                <optgroup label="🌐 Global Market Clearing Prices (MCP) - Current to 2026 (SGD-Normalised)">
-                  {civilSeries.filter(s => s.isMcpBenchmark).map(s => (
+                <optgroup label="🌏 Asia-Pacific Regional Market Benchmarks (Preferred)">
+                  {civilSeries.filter(s => s.isAsiaRegion || s.geographicScope === 'ASIA' || s.id.includes('-ASIA-')).map(s => (
                     <option key={s.id} value={s.id}>
                       {s.title}
                     </option>
                   ))}
                 </optgroup>
-                <optgroup label="Singapore Statutory Rates (BCA & SingStat)">
-                  {civilSeries.filter(s => !s.isMcpBenchmark).map(s => (
+                <optgroup label="🌐 Global Market Clearing Prices (MCP, SGD-Normalised)">
+                  {civilSeries.filter(s => s.isMcpBenchmark && !s.isAsiaRegion && !s.id.includes('-ASIA-')).map(s => (
+                    <option key={s.id} value={s.id}>
+                      {s.title}
+                    </option>
+                  ))}
+                </optgroup>
+                <optgroup label="🇸🇬 Singapore Statutory Rates (BCA & SingStat)">
+                  {civilSeries.filter(s => !s.isMcpBenchmark && !s.isAsiaRegion && !s.id.includes('-ASIA-')).map(s => (
                     <option key={s.id} value={s.id}>
                       {s.title}
                     </option>
@@ -352,7 +397,11 @@ export const MaterialsView: React.FC<MaterialsViewProps> = ({
                 label="New Tender Submission Date:"
                 period={quickNewDate}
                 onChangePeriod={setQuickNewDate}
+                durationMonths={quickNewDuration}
+                onChangeDuration={setQuickNewDuration}
+                showDuration={true}
                 isTender={true}
+                durationLabel="New Tender Contract Duration:"
               />
 
               <div className="pt-1">
@@ -397,6 +446,15 @@ export const MaterialsView: React.FC<MaterialsViewProps> = ({
                     ? ' Contractor quote escalated faster than the official market benchmark.'
                     : ' Contractor quote is well-supported by official market movements.'}
                 </div>
+
+                {liveResult.trace?.isDurationAdjusted && (
+                  <div className="mt-2 p-2 bg-indigo-100 rounded border border-indigo-300 text-[10px] text-indigo-950 flex items-start gap-1.5">
+                    <Clock className="w-3.5 h-3.5 text-indigo-700 shrink-0 mt-0.5" />
+                    <div>
+                      <span className="font-bold">⏱️ Duration Scaled ({liveResult.trace?.durationRatio?.toFixed(2)}×):</span> New tender duration is <strong>{liveResult.trace?.tenderDurationMonths} months</strong> vs <strong>{liveResult.trace?.baselineDurationMonths} months</strong> in previous contract. Benchmark scaled to match new tender term (SGD {liveResult.trace?.benchmarkMonthlyRateSgd?.toLocaleString()}/mo benchmark vs SGD {liveResult.trace?.tenderMonthlyRateSgd?.toLocaleString()}/mo tender).
+                    </div>
+                  </div>
+                )}
 
                 {liveResult.trace?.isMcpBridged && (
                   <div className="mt-2 p-2 bg-sky-100 rounded border border-sky-300 text-[10px] text-sky-950 flex items-start gap-1.5">
@@ -540,12 +598,23 @@ export const MaterialsView: React.FC<MaterialsViewProps> = ({
                         <div className="text-[10px] text-slate-400">
                           SGD {item.baselineUnitPrice.toLocaleString()}/{item.unit}
                         </div>
+                        <div className="text-[9.5px] text-slate-400">
+                          {item.baselinePriceDate} {item.baselineContractDurationMonths ? `(${item.baselineContractDurationMonths}m)` : ''}
+                        </div>
                       </td>
 
                       <td className="py-3 px-3 text-right font-mono font-bold text-slate-900">
                         <div>SGD {result?.tenderCostSgd.toLocaleString()}</div>
                         <div className="text-[10px] text-slate-400">
                           SGD {item.tenderUnitPrice.toLocaleString()}/{item.unit}
+                        </div>
+                        <div className="flex items-center justify-end gap-1 text-[9.5px]">
+                          <span className="text-indigo-600 font-semibold">{item.tenderPriceDate}</span>
+                          {item.tenderContractDurationMonths && (
+                            <span className="bg-indigo-50 text-indigo-700 px-1 rounded border border-indigo-200">
+                              {item.tenderContractDurationMonths}m
+                            </span>
+                          )}
                         </div>
                       </td>
 
@@ -554,6 +623,12 @@ export const MaterialsView: React.FC<MaterialsViewProps> = ({
                         <div className="text-[10px] text-blue-600">
                           Rise: {result?.indexChangePercent >= 0 ? '+' : ''}{result?.indexChangePercent.toFixed(1)}%
                         </div>
+                        {result?.trace?.isDurationAdjusted && (
+                          <div className="text-[9.5px] text-indigo-700 font-sans font-semibold flex items-center justify-end gap-0.5" title={`Term scaled by ${result?.trace?.durationRatio?.toFixed(2)}x`}>
+                            <Clock className="w-2.5 h-2.5" />
+                            <span>{result?.trace?.durationRatio?.toFixed(2)}× term</span>
+                          </div>
+                        )}
                       </td>
 
                       <td className={`py-3 px-3 text-right font-mono font-bold ${

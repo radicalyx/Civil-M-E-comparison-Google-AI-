@@ -484,6 +484,212 @@ export const HISTORICAL_OBSERVATIONS: Record<string, DataObservation[]> = {
     { period: '2025M06', date: '2025-06-01', value: 127.2 },
     { period: '2025M12', date: '2025-12-01', value: 128.0 },
     { period: '2026M03', date: '2026-03-01', value: 128.5 }
+  ],
+
+  // =========================================================================
+  // ASIA-PACIFIC REGIONAL MCP BENCHMARKS - OBSERVATIONS
+  // Data specific for Asia / Southeast Asia / East Asia region
+  // =========================================================================
+  'MCP-ASIA-STEEL-REBAR': [
+    { period: '2020M01', date: '2020-01-01', value: 720.0 },
+    { period: '2021M01', date: '2021-01-01', value: 870.0 },
+    { period: '2021M12', date: '2021-12-01', value: 1040.0 },
+    { period: '2022M03', date: '2022-03-01', value: 1110.0 },
+    { period: '2022M06', date: '2022-06-01', value: 1060.0 },
+    { period: '2022M12', date: '2022-12-01', value: 1020.0 },
+    { period: '2023M06', date: '2023-06-01', value: 995.0 },
+    { period: '2023M12', date: '2023-12-01', value: 980.0 },
+    { period: '2024M06', date: '2024-06-01', value: 965.0 },
+    { period: '2024M09', date: '2024-09-01', value: 955.0 },
+    { period: '2024M12', date: '2024-12-01', value: 950.0 },
+    { period: '2025M03', date: '2025-03-01', value: 948.0 },
+    { period: '2025M06', date: '2025-06-01', value: 945.0 },
+    { period: '2025M09', date: '2025-09-01', value: 942.0 },
+    { period: '2025M12', date: '2025-12-01', value: 940.0 },
+    { period: '2026M03', date: '2026-03-01', value: 940.0 }
+  ],
+
+  'MCP-ASIA-CONCRETE-G40': [
+    { period: '2020M01', date: '2020-01-01', value: 96.0 },
+    { period: '2021M01', date: '2021-01-01', value: 99.5 },
+    { period: '2021M12', date: '2021-12-01', value: 112.0 },
+    { period: '2022M06', date: '2022-06-01', value: 122.0 },
+    { period: '2022M12', date: '2022-12-01', value: 125.0 },
+    { period: '2023M06', date: '2023-06-01', value: 125.5 },
+    { period: '2023M12', date: '2023-12-01', value: 124.8 },
+    { period: '2024M06', date: '2024-06-01', value: 124.5 },
+    { period: '2024M09', date: '2024-09-01', value: 125.0 },
+    { period: '2024M12', date: '2024-12-01', value: 125.2 },
+    { period: '2025M03', date: '2025-03-01', value: 125.5 },
+    { period: '2025M06', date: '2025-06-01', value: 125.6 },
+    { period: '2025M09', date: '2025-09-01', value: 125.7 },
+    { period: '2025M12', date: '2025-12-01', value: 125.8 },
+    { period: '2026M03', date: '2026-03-01', value: 125.8 }
+  ],
+
+  'MCP-ASIA-COPPER': [
+    { period: '2020M01', date: '2020-01-01', value: 93.5 },
+    { period: '2021M01', date: '2021-01-01', value: 123.0 },
+    { period: '2021M12', date: '2021-12-01', value: 147.0 },
+    { period: '2022M03', date: '2022-03-01', value: 155.0 },
+    { period: '2022M06', date: '2022-06-01', value: 137.0 },
+    { period: '2022M12', date: '2022-12-01', value: 131.5 },
+    { period: '2023M06', date: '2023-06-01', value: 133.5 },
+    { period: '2023M12', date: '2023-12-01', value: 135.0 },
+    { period: '2024M06', date: '2024-06-01', value: 145.2 },
+    { period: '2024M09', date: '2024-09-01', value: 142.0 },
+    { period: '2024M12', date: '2024-12-01', value: 139.8 },
+    { period: '2025M03', date: '2025-03-01', value: 140.5 },
+    { period: '2025M06', date: '2025-06-01', value: 141.0 },
+    { period: '2025M09', date: '2025-09-01', value: 141.2 },
+    { period: '2025M12', date: '2025-12-01', value: 141.4 },
+    { period: '2026M03', date: '2026-03-01', value: 141.5 }
+  ],
+
+  'MCP-ASIA-ALUMINIUM': [
+    { period: '2020M01', date: '2020-01-01', value: 92.5 },
+    { period: '2021M01', date: '2021-01-01', value: 104.0 },
+    { period: '2021M12', date: '2021-12-01', value: 139.0 },
+    { period: '2022M03', date: '2022-03-01', value: 161.0 },
+    { period: '2022M06', date: '2022-06-01', value: 130.0 },
+    { period: '2022M12', date: '2022-12-01', value: 121.5 },
+    { period: '2023M06', date: '2023-06-01', value: 117.0 },
+    { period: '2023M12', date: '2023-12-01', value: 118.5 },
+    { period: '2024M06', date: '2024-06-01', value: 126.0 },
+    { period: '2024M09', date: '2024-09-01', value: 124.5 },
+    { period: '2024M12', date: '2024-12-01', value: 124.8 },
+    { period: '2025M03', date: '2025-03-01', value: 125.0 },
+    { period: '2025M06', date: '2025-06-01', value: 125.1 },
+    { period: '2025M09', date: '2025-09-01', value: 125.1 },
+    { period: '2025M12', date: '2025-12-01', value: 125.2 },
+    { period: '2026M03', date: '2026-03-01', value: 125.2 }
+  ],
+
+  'MCP-ASIA-STRUCTURAL-STEEL': [
+    { period: '2020M01', date: '2020-01-01', value: 95.0 },
+    { period: '2021M01', date: '2021-01-01', value: 116.0 },
+    { period: '2021M12', date: '2021-12-01', value: 144.0 },
+    { period: '2022M03', date: '2022-03-01', value: 152.0 },
+    { period: '2022M06', date: '2022-06-01', value: 141.0 },
+    { period: '2022M12', date: '2022-12-01', value: 134.0 },
+    { period: '2023M06', date: '2023-06-01', value: 130.0 },
+    { period: '2023M12', date: '2023-12-01', value: 128.5 },
+    { period: '2024M06', date: '2024-06-01', value: 126.8 },
+    { period: '2024M09', date: '2024-09-01', value: 127.0 },
+    { period: '2024M12', date: '2024-12-01', value: 127.2 },
+    { period: '2025M03', date: '2025-03-01', value: 127.4 },
+    { period: '2025M06', date: '2025-06-01', value: 127.5 },
+    { period: '2025M09', date: '2025-09-01', value: 127.7 },
+    { period: '2025M12', date: '2025-12-01', value: 127.8 },
+    { period: '2026M03', date: '2026-03-01', value: 127.8 }
+  ],
+
+  'MCP-ASIA-ME-EQUIPMENT': [
+    { period: '2020M01', date: '2020-01-01', value: 98.0 },
+    { period: '2021M01', date: '2021-01-01', value: 101.5 },
+    { period: '2021M12', date: '2021-12-01', value: 112.5 },
+    { period: '2022M06', date: '2022-06-01', value: 120.0 },
+    { period: '2022M12', date: '2022-12-01', value: 122.0 },
+    { period: '2023M06', date: '2023-06-01', value: 121.5 },
+    { period: '2023M12', date: '2023-12-01', value: 121.2 },
+    { period: '2024M06', date: '2024-06-01', value: 122.0 },
+    { period: '2024M09', date: '2024-09-01', value: 122.8 },
+    { period: '2024M12', date: '2024-12-01', value: 123.5 },
+    { period: '2025M03', date: '2025-03-01', value: 124.1 },
+    { period: '2025M06', date: '2025-06-01', value: 124.5 },
+    { period: '2025M09', date: '2025-09-01', value: 124.8 },
+    { period: '2025M12', date: '2025-12-01', value: 125.0 },
+    { period: '2026M03', date: '2026-03-01', value: 125.1 }
+  ],
+
+  'MCP-ASIA-SWITCHGEAR': [
+    { period: '2020M01', date: '2020-01-01', value: 98.5 },
+    { period: '2021M01', date: '2021-01-01', value: 102.5 },
+    { period: '2021M12', date: '2021-12-01', value: 116.5 },
+    { period: '2022M06', date: '2022-06-01', value: 123.0 },
+    { period: '2022M12', date: '2022-12-01', value: 125.0 },
+    { period: '2023M06', date: '2023-06-01', value: 124.5 },
+    { period: '2023M12', date: '2023-12-01', value: 124.8 },
+    { period: '2024M06', date: '2024-06-01', value: 125.5 },
+    { period: '2024M09', date: '2024-09-01', value: 126.2 },
+    { period: '2024M12', date: '2024-12-01', value: 127.0 },
+    { period: '2025M03', date: '2025-03-01', value: 127.6 },
+    { period: '2025M06', date: '2025-06-01', value: 128.0 },
+    { period: '2025M09', date: '2025-09-01', value: 128.3 },
+    { period: '2025M12', date: '2025-12-01', value: 128.5 },
+    { period: '2026M03', date: '2026-03-01', value: 128.6 }
+  ],
+
+  'MCP-ASIA-GENERATORS': [
+    { period: '2020M01', date: '2020-01-01', value: 97.5 },
+    { period: '2021M01', date: '2021-01-01', value: 101.0 },
+    { period: '2021M12', date: '2021-12-01', value: 111.0 },
+    { period: '2022M06', date: '2022-06-01', value: 118.0 },
+    { period: '2022M12', date: '2022-12-01', value: 121.0 },
+    { period: '2023M06', date: '2023-06-01', value: 120.5 },
+    { period: '2023M12', date: '2023-12-01', value: 120.8 },
+    { period: '2024M06', date: '2024-06-01', value: 121.5 },
+    { period: '2024M09', date: '2024-09-01', value: 122.4 },
+    { period: '2024M12', date: '2024-12-01', value: 123.2 },
+    { period: '2025M03', date: '2025-03-01', value: 123.8 },
+    { period: '2025M06', date: '2025-06-01', value: 124.2 },
+    { period: '2025M09', date: '2025-09-01', value: 124.6 },
+    { period: '2025M12', date: '2025-12-01', value: 124.8 },
+    { period: '2026M03', date: '2026-03-01', value: 124.9 }
+  ],
+
+  'MCP-ASIA-ELEVATORS': [
+    { period: '2020M01', date: '2020-01-01', value: 98.5 },
+    { period: '2021M01', date: '2021-01-01', value: 101.0 },
+    { period: '2021M12', date: '2021-12-01', value: 111.5 },
+    { period: '2022M06', date: '2022-06-01', value: 118.5 },
+    { period: '2022M12', date: '2022-12-01', value: 120.5 },
+    { period: '2023M06', date: '2023-06-01', value: 121.0 },
+    { period: '2023M12', date: '2023-12-01', value: 121.2 },
+    { period: '2024M06', date: '2024-06-01', value: 121.8 },
+    { period: '2024M09', date: '2024-09-01', value: 122.5 },
+    { period: '2024M12', date: '2024-12-01', value: 123.0 },
+    { period: '2025M03', date: '2025-03-01', value: 123.5 },
+    { period: '2025M06', date: '2025-06-01', value: 123.9 },
+    { period: '2025M09', date: '2025-09-01', value: 124.1 },
+    { period: '2025M12', date: '2025-12-01', value: 124.2 },
+    { period: '2026M03', date: '2026-03-01', value: 124.3 }
+  ],
+
+  'MCP-ASIA-LOGISTICS': [
+    { period: '2020M01', date: '2020-01-01', value: 96.0 },
+    { period: '2021M01', date: '2021-01-01', value: 165.0 },
+    { period: '2021M12', date: '2021-12-01', value: 215.0 },
+    { period: '2022M06', date: '2022-06-01', value: 175.0 },
+    { period: '2022M12', date: '2022-12-01', value: 110.0 },
+    { period: '2023M06', date: '2023-06-01', value: 98.0 },
+    { period: '2023M12', date: '2023-12-01', value: 104.0 },
+    { period: '2024M06', date: '2024-06-01', value: 138.0 },
+    { period: '2024M09', date: '2024-09-01', value: 136.0 },
+    { period: '2024M12', date: '2024-12-01', value: 135.0 },
+    { period: '2025M03', date: '2025-03-01', value: 134.5 },
+    { period: '2025M06', date: '2025-06-01', value: 134.0 },
+    { period: '2025M09', date: '2025-09-01', value: 133.8 },
+    { period: '2025M12', date: '2025-12-01', value: 133.5 },
+    { period: '2026M03', date: '2026-03-01', value: 133.4 }
+  ],
+
+  'MCP-ASIA-MAINTENANCE-LABOUR': [
+    { period: '2020M01', date: '2020-01-01', value: 99.5 },
+    { period: '2021M01', date: '2021-01-01', value: 103.5 },
+    { period: '2021M12', date: '2021-12-01', value: 109.0 },
+    { period: '2022M06', date: '2022-06-01', value: 115.0 },
+    { period: '2022M12', date: '2022-12-01', value: 117.0 },
+    { period: '2023M06', date: '2023-06-01', value: 120.0 },
+    { period: '2023M12', date: '2023-12-01', value: 121.5 },
+    { period: '2024M06', date: '2024-06-01', value: 123.5 },
+    { period: '2024M09', date: '2024-09-01', value: 124.5 },
+    { period: '2024M12', date: '2024-12-01', value: 125.5 },
+    { period: '2025M03', date: '2025-03-01', value: 126.0 },
+    { period: '2025M06', date: '2025-06-01', value: 126.5 },
+    { period: '2025M09', date: '2025-09-01', value: 127.0 },
+    { period: '2025M12', date: '2025-12-01', value: 127.2 },
+    { period: '2026M03', date: '2026-03-01', value: 127.4 }
   ]
 };
 

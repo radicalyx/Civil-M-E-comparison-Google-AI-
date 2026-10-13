@@ -9,6 +9,7 @@ interface ContractPeriodInputProps {
   durationMonths?: number;
   onChangeDuration?: (months: number) => void;
   showDuration?: boolean;
+  durationLabel?: string;
   isTender?: boolean;
   variant?: 'compact' | 'standard';
   placeholder?: string;
@@ -156,6 +157,7 @@ export const ContractPeriodInput: React.FC<ContractPeriodInputProps> = ({
   durationMonths = 12,
   onChangeDuration,
   showDuration = false,
+  durationLabel,
   isTender = false,
   variant = 'standard',
   placeholder = 'e.g. 2024-05, 2025-01, 2026-03'
@@ -328,7 +330,7 @@ export const ContractPeriodInput: React.FC<ContractPeriodInputProps> = ({
           <div className="flex items-center justify-between text-[11px] text-slate-700">
             <span className="flex items-center gap-1 font-semibold">
               <Clock className="w-3 h-3 text-slate-500" />
-              <span>Contract Duration:</span>
+              <span>{durationLabel || 'Contract Duration:'}</span>
             </span>
             <div className="flex items-center gap-1">
               <input
