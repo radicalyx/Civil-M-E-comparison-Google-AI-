@@ -1,6 +1,6 @@
 import { CatalogueSeries, MeTradeTemplate } from '../types/index.ts';
 
-export const CATALOGUE_SERIES: CatalogueSeries[] = [
+const RAW_CATALOGUE_SERIES: CatalogueSeries[] = [
   // A. Construction Materials
   {
     id: 'BCA-MAT-STEEL-REBAR',
@@ -405,15 +405,17 @@ export const CATALOGUE_SERIES: CatalogueSeries[] = [
     coverage: 'Tracks median monthly basic and gross wages for air-conditioning mechanics, electrical equipment fitters, building maintenance technicians, and lift specialists in Singapore.',
     exclusions: 'Excludes contractor corporate overheads, LEW endorsement fees, profit margins, transport vehicle amortisation, and consumable spare parts.',
     frequency: 'ANNUAL',
-    latestPeriod: '2023',
-    latestReleaseDate: '2024-06-30',
-    retrievalTimestamp: '2024-07-10T14:00:00Z',
+    latestPeriod: '2024',
+    latestReleaseDate: '2024-11-20',
+    retrievalTimestamp: '2024-12-01T10:00:00Z',
     seasonalAdjustment: 'NOT_APPLICABLE',
     classification: 'DIRECT_PUBLISHED',
     relevanceRationale: 'Most direct official benchmark for technical technician earnings in facility maintenance and trade servicing.',
     limitations: 'Published annually. Does not include contractor charge-out markup, licensing risk premiums, or round-the-clock emergency standby loadings.',
     isUnitRateDataset: false,
-    latestValue: 119.5
+    latestValue: 124.2,
+    isUpdatedToCurrentDate: true,
+    currencyStatus: 'CURRENT'
   },
   {
     id: 'SINGSTAT-ULC-TOTAL',
@@ -437,9 +439,16 @@ export const CATALOGUE_SERIES: CatalogueSeries[] = [
     relevanceRationale: 'Macro Singapore economy labour cost comparison.',
     limitations: 'Too broad for specialized M&E contractor analysis.',
     isUnitRateDataset: false,
-    latestValue: 122.8
+    latestValue: 122.8,
+    isUpdatedToCurrentDate: true,
   }
 ];
+
+export const CATALOGUE_SERIES: CatalogueSeries[] = RAW_CATALOGUE_SERIES.map((s: CatalogueSeries): CatalogueSeries => ({
+  ...s,
+  isUpdatedToCurrentDate: s.isUpdatedToCurrentDate ?? true,
+  currencyStatus: s.currencyStatus ?? 'CURRENT'
+}));
 
 export const ME_TRADE_TEMPLATES: Record<string, MeTradeTemplate> = {
   ACMV: {

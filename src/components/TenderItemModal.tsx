@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Plus, Save, Building2, Wrench, Clock, AlertTriangle, Sliders, RefreshCw } from 'lucide-react';
 import { CatalogueSeries, CompositeWeightItem, FXRate, GstBasis, TenderLineItem } from '../types/index.ts';
 import { ME_TRADE_TEMPLATES } from '../server/catalogueData.ts';
+import { ContractPeriodInput } from './ContractPeriodInput.tsx';
 
 interface TenderItemModalProps {
   itemToEdit: TenderLineItem | null;
@@ -376,21 +377,21 @@ export const TenderItemModal: React.FC<TenderItemModalProps> = ({
 
           {/* Pricing Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-slate-50 p-3 rounded-lg border border-slate-200">
-            {/* Baseline */}
-            <div className="space-y-2">
-              <div className="font-bold text-slate-800 text-[11px] uppercase tracking-wider">
-                Comparable Baseline
+            {/* Baseline / Previous Contract */}
+            <div className="space-y-2.5 bg-white p-2.5 rounded border border-slate-200">
+              <div className="font-bold text-slate-800 text-[11px] uppercase tracking-wider flex items-center justify-between">
+                <span>Previous Contract / Baseline</span>
               </div>
-              <div>
-                <label className="block text-[10px] text-slate-600 mb-0.5">Baseline Period (e.g. 2021M01 / 2021Q1)</label>
-                <input
-                  type="text"
-                  required
-                  value={baselineDate}
-                  onChange={(e) => setBaselineDate(e.target.value)}
-                  className="w-full bg-white border border-slate-300 rounded px-2.5 py-1 text-xs text-slate-900 font-mono"
-                />
-              </div>
+
+              <ContractPeriodInput
+                label="Contract Time Period:"
+                period={baselineDate}
+                onChangePeriod={setBaselineDate}
+                durationMonths={contractDurationMonths}
+                onChangeDuration={setContractDurationMonths}
+                showDuration={true}
+              />
+
               <div>
                 <label className="block text-[10px] text-slate-600 mb-0.5">Baseline Unit Price ({currency})</label>
                 <input
@@ -399,7 +400,7 @@ export const TenderItemModal: React.FC<TenderItemModalProps> = ({
                   required
                   value={baselineUnitPrice}
                   onChange={(e) => setBaselineUnitPrice(parseFloat(e.target.value) || 0)}
-                  className="w-full bg-white border border-slate-300 rounded px-2.5 py-1 text-xs text-slate-900 font-mono font-bold"
+                  className="w-full bg-slate-50 border border-slate-300 rounded px-2.5 py-1 text-xs text-slate-900 font-mono font-bold"
                 />
               </div>
               <div className="text-[10px] text-slate-500 font-mono">
@@ -408,20 +409,18 @@ export const TenderItemModal: React.FC<TenderItemModalProps> = ({
             </div>
 
             {/* Current Tender */}
-            <div className="space-y-2">
+            <div className="space-y-2.5 bg-white p-2.5 rounded border border-slate-200">
               <div className="font-bold text-slate-800 text-[11px] uppercase tracking-wider">
                 Current Tender Submission
               </div>
-              <div>
-                <label className="block text-[10px] text-slate-600 mb-0.5">Tender Price Period (e.g. 2024M06 / 2024Q2)</label>
-                <input
-                  type="text"
-                  required
-                  value={tenderDate}
-                  onChange={(e) => setTenderDate(e.target.value)}
-                  className="w-full bg-white border border-slate-300 rounded px-2.5 py-1 text-xs text-slate-900 font-mono"
-                />
-              </div>
+
+              <ContractPeriodInput
+                label="Tender Submission Date:"
+                period={tenderDate}
+                onChangePeriod={setTenderDate}
+                isTender={true}
+              />
+
               <div>
                 <label className="block text-[10px] text-slate-600 mb-0.5">Tender Unit Price ({currency})</label>
                 <input
@@ -430,7 +429,7 @@ export const TenderItemModal: React.FC<TenderItemModalProps> = ({
                   required
                   value={tenderUnitPrice}
                   onChange={(e) => setTenderUnitPrice(parseFloat(e.target.value) || 0)}
-                  className="w-full bg-white border border-slate-300 rounded px-2.5 py-1 text-xs text-slate-900 font-mono font-bold"
+                  className="w-full bg-slate-50 border border-slate-300 rounded px-2.5 py-1 text-xs text-slate-900 font-mono font-bold"
                 />
               </div>
               <div className="text-[10px] text-slate-500 font-mono">

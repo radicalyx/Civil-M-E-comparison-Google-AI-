@@ -18,6 +18,7 @@ import {
 import { CatalogueSeries, DataObservation, TenderLineItem } from '../types/index.ts';
 import { calculateItemBenchmark, sanitizeCsvField } from '../utils/calculations.ts';
 import { PriceIndexChart } from './PriceIndexChart.tsx';
+import { ContractPeriodInput } from './ContractPeriodInput.tsx';
 
 interface MaintenanceViewProps {
   items: TenderLineItem[];
@@ -44,13 +45,19 @@ export const MaintenanceView: React.FC<MaintenanceViewProps> = ({
   onUpdateLabourShare,
   onUpdateLabourSeries
 }) => {
+  // Reference currency filter state
+  const [onlyCurrentReferences, setOnlyCurrentReferences] = useState(true);
+
   // Filter only Maintenance items
   const maintenanceItems = items.filter(i => i.category === 'MAINTENANCE');
   const mntIndices = items.map((item, idx) => item.category === 'MAINTENANCE' ? idx : -1).filter(idx => idx !== -1);
   const mntResults = mntIndices.map(idx => itemResults[idx]).filter(Boolean);
 
-  // Labour series for graph
-  const labourSeries = catalogue.filter(c => c.category === 'LABOUR_MAINTENANCE');
+  // Labour series for graph - filtered to updated current dates
+  const labourSeries = catalogue.filter(c =>
+    c.category === 'LABOUR_MAINTENANCE' &&
+    (!onlyCurrentReferences || c.isUpdatedToCurrentDate !== false)
+  );
 
   // Dedicated Maintenance Totals (Evaluated Separately)
   const totalMntBaseline = mntResults.reduce((sum, r) => sum + r.baselineCostSgd, 0);
@@ -84,6 +91,8 @@ export const MaintenanceView: React.FC<MaintenanceViewProps> = ({
     exchangeRateToSgd: 1.0,
     gstBasis: 'EXCLUSIVE',
     baselinePriceDate: quickPrevDate,
+    baselineContractDurationMonths: quickDuration,
+    baselineContractPeriodLabel: `${quickPrevDate} (${quickDuration} mos contract term)`,
     baselineUnitPrice: quickPrevPrice,
     baselineTotalPrice: quickPrevPrice,
     tenderPriceDate: quickNewDate,
@@ -103,7 +112,9 @@ export const MaintenanceView: React.FC<MaintenanceViewProps> = ({
       ...testItem,
       id: 'MNT-' + Date.now(),
       tendererName: quickTenderer.trim() || 'Facility Services Pte Ltd',
-      itemCode: 'MNT-' + Math.floor(100 + Math.random() * 900)
+      itemCode: 'MNT-' + Math.floor(100 + Math.random() * 900),
+      baselineContractDurationMonths: quickDuration,
+      baselineContractPeriodLabel: `${quickPrevDate} (${quickDuration} mos contract term)`
     };
     onAddItem(newItem);
     setQuickTenderer('');
@@ -269,37 +280,55 @@ export const MaintenanceView: React.FC<MaintenanceViewProps> = ({
             </div>
           </div>
 
-          {/* Step 2: Prices */}
-          <div className="space-y-2 bg-slate-50 p-3.5 rounded-lg border border-slate-200">
+          {/* Step 2: Previous Contract vs Renewal Quote */}
+          <div className="space-y-3 bg-slate-50 p-3.5 rounded-lg border border-slate-200">
             <label className="font-bold text-slate-800 flex items-center gap-1.5">
               <span className="w-4 h-4 rounded-full bg-slate-900 text-white flex items-center justify-center text-[10px]">2</span>
-              <span>Previous vs New Renewal Quote:</span>
+              <span>Previous Contract vs Renewal Quote:</span>
             </label>
 
-            <div>
-              <div className="flex justify-between text-[11px] text-slate-600">
-                <span>Previous Contract Amount (SGD):</span>
-                <span>Period: {quickPrevDate}</span>
-              </div>
-              <input
-                type="number"
-                value={quickPrevPrice}
-                onChange={(e) => setQuickPrevPrice(parseFloat(e.target.value) || 0)}
-                className="w-full bg-white border border-slate-300 rounded px-2.5 py-1 font-mono text-xs font-semibold"
+            {/* Previous Contract Time Period Input */}
+            <div className="bg-white p-2.5 rounded border border-slate-200 space-y-2">
+              <ContractPeriodInput
+                label="Previous Contract Period:"
+                period={quickPrevDate}
+                onChangePeriod={setQuickPrevDate}
+                durationMonths={quickDuration}
+                onChangeDuration={setQuickDuration}
+                showDuration={true}
               />
+
+              <div className="pt-1">
+                <span className="text-[11px] text-slate-600 block mb-0.5">Previous Contract Total (SGD):</span>
+                <input
+                  type="number"
+                  value={quickPrevPrice}
+                  onChange={(e) => setQuickPrevPrice(parseFloat(e.target.value) || 0)}
+                  className="w-full bg-slate-50 border border-slate-300 rounded px-2.5 py-1 font-mono text-xs font-semibold"
+                  placeholder="Enter previous contract total"
+                />
+              </div>
             </div>
 
-            <div className="pt-1">
-              <div className="flex justify-between text-[11px] text-slate-600">
-                <span>New Renewal Quote (SGD):</span>
-                <span>Period: {quickNewDate}</span>
-              </div>
-              <input
-                type="number"
-                value={quickNewPrice}
-                onChange={(e) => setQuickNewPrice(parseFloat(e.target.value) || 0)}
-                className="w-full bg-white border border-slate-300 rounded px-2.5 py-1 font-mono text-xs font-bold text-slate-900"
+            {/* Renewal Tender Quote Submission Date */}
+            <div className="bg-white p-2.5 rounded border border-slate-200 space-y-2">
+              <ContractPeriodInput
+                label="New Renewal Quote Date:"
+                period={quickNewDate}
+                onChangePeriod={setQuickNewDate}
+                isTender={true}
               />
+
+              <div className="pt-1">
+                <span className="text-[11px] text-slate-600 block mb-0.5">New Renewal Quote (SGD):</span>
+                <input
+                  type="number"
+                  value={quickNewPrice}
+                  onChange={(e) => setQuickNewPrice(parseFloat(e.target.value) || 0)}
+                  className="w-full bg-slate-50 border border-slate-300 rounded px-2.5 py-1 font-mono text-xs font-bold text-slate-900"
+                  placeholder="Enter renewal quotation"
+                />
+              </div>
             </div>
           </div>
 

@@ -20,6 +20,7 @@ import { CatalogueSeries, CompositeWeightItem, DataObservation, TenderLineItem }
 import { ME_TRADE_TEMPLATES } from '../server/catalogueData.ts';
 import { calculateItemBenchmark, sanitizeCsvField } from '../utils/calculations.ts';
 import { PriceIndexChart } from './PriceIndexChart.tsx';
+import { ContractPeriodInput } from './ContractPeriodInput.tsx';
 
 interface MeSupplyInstallViewProps {
   items: TenderLineItem[];
@@ -44,21 +45,27 @@ export const MeSupplyInstallView: React.FC<MeSupplyInstallViewProps> = ({
   onAddItem,
   onUpdateWeights
 }) => {
+  // Reference currency filter state
+  const [onlyCurrentReferences, setOnlyCurrentReferences] = useState(true);
+
   // Filter only M&E items
   const meItems = items.filter(i => i.category === 'ME_TRADE');
   const meIndices = items.map((item, idx) => item.category === 'ME_TRADE' ? idx : -1).filter(idx => idx !== -1);
   const meResults = meIndices.map(idx => itemResults[idx]).filter(Boolean);
 
-  // M&E Series for graph and component mapping
+  // M&E Series for graph and component mapping - filtered to updated current dates
   const meSeries = catalogue.filter(c =>
-    c.category === 'ME_EQUIPMENT' ||
-    c.id === 'SINGSTAT-DSPI-DIV77-CABLE' ||
-    c.id === 'SINGSTAT-DSPI-DIV68-ALUM' ||
-    c.id === 'SINGSTAT-DSPI-DIV67' ||
-    c.id === 'SINGSTAT-DSPI-DIV66-NONMETALLIC' ||
-    c.id === 'SINGSTAT-ULC-CONST' ||
-    c.id === 'SINGSTAT-ULC-TOTAL' ||
-    c.id === 'MOM-WAGE-TECH-ME'
+    (!onlyCurrentReferences || c.isUpdatedToCurrentDate !== false) &&
+    (
+      c.category === 'ME_EQUIPMENT' ||
+      c.id === 'SINGSTAT-DSPI-DIV77-CABLE' ||
+      c.id === 'SINGSTAT-DSPI-DIV68-ALUM' ||
+      c.id === 'SINGSTAT-DSPI-DIV67' ||
+      c.id === 'SINGSTAT-DSPI-DIV66-NONMETALLIC' ||
+      c.id === 'SINGSTAT-ULC-CONST' ||
+      c.id === 'SINGSTAT-ULC-TOTAL' ||
+      c.id === 'MOM-WAGE-TECH-ME'
+    )
   );
 
   // Dedicated M&E Totals (Evaluated Separately)
@@ -75,6 +82,7 @@ export const MeSupplyInstallView: React.FC<MeSupplyInstallViewProps> = ({
   const [quickDesc, setQuickDesc] = useState('Chiller Plant & AHU Replacement');
   const [quickPrevPrice, setQuickPrevPrice] = useState(680000);
   const [quickPrevDate, setQuickPrevDate] = useState('2021M01');
+  const [quickPrevDuration, setQuickPrevDuration] = useState(24);
   const [quickNewPrice, setQuickNewPrice] = useState(845000);
   const [quickNewDate, setQuickNewDate] = useState('2024M06');
 
@@ -246,6 +254,8 @@ export const MeSupplyInstallView: React.FC<MeSupplyInstallViewProps> = ({
     exchangeRateToSgd: 1.0,
     gstBasis: 'EXCLUSIVE',
     baselinePriceDate: quickPrevDate,
+    baselineContractDurationMonths: quickPrevDuration,
+    baselineContractPeriodLabel: `${quickPrevDate} (${quickPrevDuration} mos contract term)`,
     baselineUnitPrice: quickPrevPrice,
     baselineTotalPrice: quickPrevPrice,
     tenderPriceDate: quickNewDate,
@@ -263,7 +273,9 @@ export const MeSupplyInstallView: React.FC<MeSupplyInstallViewProps> = ({
       ...testItem,
       id: 'ME-' + Date.now(),
       tendererName: quickTenderer.trim() || 'Specialist Contractor',
-      itemCode: 'ME-' + quickTrade + '-' + Math.floor(100 + Math.random() * 900)
+      itemCode: 'ME-' + quickTrade + '-' + Math.floor(100 + Math.random() * 900),
+      baselineContractDurationMonths: quickPrevDuration,
+      baselineContractPeriodLabel: `${quickPrevDate} (${quickPrevDuration} mos contract term)`
     };
     onAddItem(newItem);
     setQuickTenderer('');
@@ -506,37 +518,55 @@ export const MeSupplyInstallView: React.FC<MeSupplyInstallViewProps> = ({
             </div>
           </div>
 
-          {/* Step 2: Prices */}
-          <div className="space-y-2 bg-slate-50 p-3.5 rounded-lg border border-slate-200">
+          {/* Step 2: Previous Contract vs Current Tender Quote */}
+          <div className="space-y-3 bg-slate-50 p-3.5 rounded-lg border border-slate-200">
             <label className="font-bold text-slate-800 flex items-center gap-1.5">
               <span className="w-4 h-4 rounded-full bg-slate-900 text-white flex items-center justify-center text-[10px]">2</span>
-              <span>Previous vs Current Tender Quote:</span>
+              <span>Previous Contract vs Current Tender Quote:</span>
             </label>
 
-            <div>
-              <div className="flex justify-between text-[11px] text-slate-600">
-                <span>Previous Package Price (SGD):</span>
-                <span>Date: {quickPrevDate}</span>
-              </div>
-              <input
-                type="number"
-                value={quickPrevPrice}
-                onChange={(e) => setQuickPrevPrice(parseFloat(e.target.value) || 0)}
-                className="w-full bg-white border border-slate-300 rounded px-2.5 py-1 font-mono text-xs font-semibold"
+            {/* Previous Contract Time Period Input */}
+            <div className="bg-white p-2.5 rounded border border-slate-200 space-y-2">
+              <ContractPeriodInput
+                label="Previous Contract Period:"
+                period={quickPrevDate}
+                onChangePeriod={setQuickPrevDate}
+                durationMonths={quickPrevDuration}
+                onChangeDuration={setQuickPrevDuration}
+                showDuration={true}
               />
+
+              <div className="pt-1">
+                <span className="text-[11px] text-slate-600 block mb-0.5">Previous Package Price (SGD):</span>
+                <input
+                  type="number"
+                  value={quickPrevPrice}
+                  onChange={(e) => setQuickPrevPrice(parseFloat(e.target.value) || 0)}
+                  className="w-full bg-slate-50 border border-slate-300 rounded px-2.5 py-1 font-mono text-xs font-semibold"
+                  placeholder="Enter previous contract package price"
+                />
+              </div>
             </div>
 
-            <div className="pt-1">
-              <div className="flex justify-between text-[11px] text-slate-600">
-                <span>New Tender Quote (SGD):</span>
-                <span>Date: {quickNewDate}</span>
-              </div>
-              <input
-                type="number"
-                value={quickNewPrice}
-                onChange={(e) => setQuickNewPrice(parseFloat(e.target.value) || 0)}
-                className="w-full bg-white border border-slate-300 rounded px-2.5 py-1 font-mono text-xs font-bold text-slate-900"
+            {/* New Tender Quote Submission Date */}
+            <div className="bg-white p-2.5 rounded border border-slate-200 space-y-2">
+              <ContractPeriodInput
+                label="New Tender Quote Submission Date:"
+                period={quickNewDate}
+                onChangePeriod={setQuickNewDate}
+                isTender={true}
               />
+
+              <div className="pt-1">
+                <span className="text-[11px] text-slate-600 block mb-0.5">New Tender Quote (SGD):</span>
+                <input
+                  type="number"
+                  value={quickNewPrice}
+                  onChange={(e) => setQuickNewPrice(parseFloat(e.target.value) || 0)}
+                  className="w-full bg-slate-50 border border-slate-300 rounded px-2.5 py-1 font-mono text-xs font-bold text-slate-900"
+                  placeholder="Enter current quotation"
+                />
+              </div>
             </div>
           </div>
 

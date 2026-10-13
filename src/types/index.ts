@@ -42,6 +42,8 @@ export interface CatalogueSeries {
   limitations: string;
   isUnitRateDataset: boolean; // true if absolute SGD (e.g. BCA rebar), false if dimensionless index
   latestValue?: number;
+  isUpdatedToCurrentDate?: boolean; // verified actively published and updated to current dates
+  currencyStatus?: 'CURRENT' | 'OUTDATED';
 }
 
 export interface CompositeWeightItem {
@@ -87,13 +89,15 @@ export interface TenderLineItem {
   exchangeRateToSgd: number; // 1 foreign = X SGD
   gstBasis: GstBasis;
 
-  // Baseline
-  baselinePriceDate: string; // e.g. "2021-01" or "2021Q1"
+  // Baseline / Previous Contract
+  baselinePriceDate: string; // e.g. "2021M01", "2021Q1"
+  baselineContractDurationMonths?: number; // e.g. 12, 24, 36 months
+  baselineContractPeriodLabel?: string;    // e.g. "Jan 2021 – Dec 2022 (24 Months)"
   baselineUnitPrice: number; // in original currency
   baselineTotalPrice: number; // baselineUnitPrice * quantity
 
   // Current Tender
-  tenderPriceDate: string; // e.g. "2024-06"
+  tenderPriceDate: string; // e.g. "2024M06"
   tenderUnitPrice: number; // in original currency
   tenderTotalPrice: number; // tenderUnitPrice * quantity
 

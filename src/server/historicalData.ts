@@ -268,7 +268,8 @@ export const HISTORICAL_OBSERVATIONS: Record<string, DataObservation[]> = {
     { period: '2020', date: '2020-01-01', value: 104.0 },
     { period: '2021', date: '2021-01-01', value: 108.5 },
     { period: '2022', date: '2022-01-01', value: 114.2 },
-    { period: '2023', date: '2023-01-01', value: 119.5 }
+    { period: '2023', date: '2023-01-01', value: 119.5 },
+    { period: '2024', date: '2024-01-01', value: 124.2 }
   ],
 
   // SingStat Total Economy ULC (2015=100, Quarterly)

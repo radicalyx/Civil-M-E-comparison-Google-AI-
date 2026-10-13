@@ -26,6 +26,7 @@ export const BenchmarkMappingTable: React.FC<BenchmarkMappingTableProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
   const [selectedChartSeriesId, setSelectedChartSeriesId] = useState<string>('SINGSTAT-DSPI-DIV67');
+  const [onlyCurrentDates, setOnlyCurrentDates] = useState(true);
 
   const filtered = catalogue.filter((series) => {
     const matchesSearch =
@@ -35,7 +36,9 @@ export const BenchmarkMappingTable: React.FC<BenchmarkMappingTableProps> = ({
       series.datasetId.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesCategory =
       selectedCategory === 'ALL' || series.category === selectedCategory;
-    return matchesSearch && matchesCategory;
+    const matchesCurrency =
+      !onlyCurrentDates || series.isUpdatedToCurrentDate !== false;
+    return matchesSearch && matchesCategory && matchesCurrency;
   });
 
   const getClassificationBadge = (classification: string) => {
@@ -114,17 +117,31 @@ export const BenchmarkMappingTable: React.FC<BenchmarkMappingTableProps> = ({
           />
         </div>
 
-        <select
-          value={selectedCategory}
-          onChange={(e) => setSelectedCategory(e.target.value)}
-          className="bg-slate-50 border border-slate-300 rounded px-2.5 py-1.5 text-xs text-slate-800 font-medium focus:bg-white focus:outline-hidden"
-        >
-          <option value="ALL">All Categories</option>
-          <option value="CONSTRUCTION_MATERIALS">Construction Materials</option>
-          <option value="ME_EQUIPMENT">M&amp;E Equipment</option>
-          <option value="LABOUR_MAINTENANCE">Labour &amp; Maintenance</option>
-          <option value="MACRO_TPI">BCA Tender Price Index</option>
-        </select>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={() => setOnlyCurrentDates(!onlyCurrentDates)}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-bold transition cursor-pointer border ${
+              onlyCurrentDates
+                ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
+                : 'bg-slate-100 text-slate-600 border-slate-300'
+            }`}
+          >
+            <span className={`w-2 h-2 rounded-full ${onlyCurrentDates ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}`}></span>
+            <span>Only References Updated to Current Dates ({filtered.length})</span>
+          </button>
+
+          <select
+            value={selectedCategory}
+            onChange={(e) => setSelectedCategory(e.target.value)}
+            className="bg-slate-50 border border-slate-300 rounded px-2.5 py-1.5 text-xs text-slate-800 font-medium focus:bg-white focus:outline-hidden"
+          >
+            <option value="ALL">All Categories</option>
+            <option value="CONSTRUCTION_MATERIALS">Construction Materials</option>
+            <option value="ME_EQUIPMENT">M&amp;E Equipment</option>
+            <option value="LABOUR_MAINTENANCE">Labour &amp; Maintenance</option>
+            <option value="MACRO_TPI">BCA Tender Price Index</option>
+          </select>
+        </div>
       </div>
 
       {/* Series Cards */}
@@ -150,7 +167,11 @@ export const BenchmarkMappingTable: React.FC<BenchmarkMappingTableProps> = ({
                 </h3>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                  <span>Updated: {series.latestPeriod}</span>
+                </span>
                 <button
                   onClick={() => setSelectedChartSeriesId(series.id)}
                   className="text-[11px] font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 px-2.5 py-1 rounded transition cursor-pointer flex items-center gap-1"

@@ -160,7 +160,7 @@ export const PriceIndexChart: React.FC<PriceIndexChartProps> = ({
       {/* Series Metadata strip */}
       {activeSeries && (
         <div className="flex flex-wrap items-center justify-between gap-2 text-xs bg-slate-50 p-2.5 rounded-lg border border-slate-200">
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <span className="font-bold text-slate-900">{activeSeries.title}</span>
             <span className="text-slate-400">·</span>
             <span className="font-mono text-slate-600 text-[11px]">{activeSeries.unit}</span>
@@ -168,8 +168,14 @@ export const PriceIndexChart: React.FC<PriceIndexChartProps> = ({
             <span className="text-slate-500 text-[11px]">{activeSeries.publisher}</span>
           </div>
 
-          <div className="font-mono text-[11px] text-slate-600">
-            {activeSeries.isUnitRateDataset ? 'Delivered Market Unit Rate' : 'Index (2018=100)'} · {observations.length} Observations
+          <div className="flex items-center gap-2 font-mono text-[11px]">
+            <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-800 bg-emerald-100 border border-emerald-300 px-2 py-0.5 rounded">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+              <span>Updated to Current Date: {activeSeries.latestPeriod}</span>
+            </span>
+            <span className="text-slate-500 text-[10px]">
+              (Released: {activeSeries.latestReleaseDate})
+            </span>
           </div>
         </div>
       )}

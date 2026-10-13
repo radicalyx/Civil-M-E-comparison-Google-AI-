@@ -18,6 +18,7 @@ import {
 import { CatalogueSeries, DataObservation, TenderLineItem } from '../types/index.ts';
 import { calculateItemBenchmark, sanitizeCsvField } from '../utils/calculations.ts';
 import { PriceIndexChart } from './PriceIndexChart.tsx';
+import { ContractPeriodInput } from './ContractPeriodInput.tsx';
 
 interface MaterialsViewProps {
   items: TenderLineItem[];
@@ -40,13 +41,19 @@ export const MaterialsView: React.FC<MaterialsViewProps> = ({
   onDeleteItem,
   onAddItem
 }) => {
+  // Currency reference filter
+  const [onlyCurrentReferences, setOnlyCurrentReferences] = useState(true);
+
   // Filter only Civil items
   const civilItems = items.filter(i => i.category === 'MATERIAL');
   const civilIndices = items.map((item, idx) => item.category === 'MATERIAL' ? idx : -1).filter(idx => idx !== -1);
   const civilResults = civilIndices.map(idx => itemResults[idx]).filter(Boolean);
 
-  // Civil Catalogue Series for chart
-  const civilSeries = catalogue.filter(c => c.category === 'CONSTRUCTION_MATERIALS');
+  // Civil Catalogue Series for chart - filtered to updated current dates
+  const civilSeries = catalogue.filter(c =>
+    c.category === 'CONSTRUCTION_MATERIALS' &&
+    (!onlyCurrentReferences || c.isUpdatedToCurrentDate !== false)
+  );
 
   // Dedicated Civil Totals
   const totalCivilBaseline = civilResults.reduce((sum, r) => sum + r.baselineCostSgd, 0);
@@ -62,6 +69,7 @@ export const MaterialsView: React.FC<MaterialsViewProps> = ({
   const [quickQty, setQuickQty] = useState(100);
   const [quickPrevPrice, setQuickPrevPrice] = useState(880);
   const [quickPrevDate, setQuickPrevDate] = useState('2021M01');
+  const [quickPrevDuration, setQuickPrevDuration] = useState(12);
   const [quickNewPrice, setQuickNewPrice] = useState(1040);
   const [quickNewDate, setQuickNewDate] = useState('2024M06');
 
@@ -206,15 +214,22 @@ export const MaterialsView: React.FC<MaterialsViewProps> = ({
 
       {/* STEP 1-2-3 EASY CALCULATOR FOR LAYMEN */}
       <div className="bg-white border-2 border-blue-200 rounded-xl p-4 sm:p-6 shadow-sm space-y-4">
-        <div className="border-b border-slate-100 pb-3 flex items-center justify-between">
+        <div className="border-b border-slate-100 pb-3 flex flex-wrap items-center justify-between gap-2">
           <div>
             <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
               <span className="w-5 h-5 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-bold">✓</span>
               <span>Quick Quote Checker: Test a Material Price in 10 Seconds</span>
             </h3>
             <p className="text-xs text-slate-500 mt-0.5">
-              Enter your previous contract price and what the contractor quoted to see if it is reasonable
+              Enter your previous contract price &amp; time period, and current quote to see if escalation is justified
             </p>
+          </div>
+
+          <div className="flex items-center gap-1.5 text-xs">
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-emerald-50 text-emerald-800 border border-emerald-200 text-[11px] font-semibold">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+              <span>References updated to current dates (SingStat / BCA)</span>
+            </span>
           </div>
         </div>
 
@@ -285,39 +300,57 @@ export const MaterialsView: React.FC<MaterialsViewProps> = ({
             </div>
           </div>
 
-          {/* Step 2: Previous Price vs Current Quote */}
-          <div className="space-y-2 bg-slate-50 p-3.5 rounded-lg border border-slate-200">
+          {/* Step 2: Previous Contract vs Current Tender Rate */}
+          <div className="space-y-3 bg-slate-50 p-3.5 rounded-lg border border-slate-200">
             <label className="font-bold text-slate-800 flex items-center gap-1.5">
               <span className="w-4 h-4 rounded-full bg-slate-900 text-white flex items-center justify-center text-[10px]">2</span>
-              <span>Previous vs Current Rate:</span>
+              <span>Previous Contract vs Current Tender:</span>
             </label>
 
-            <div>
-              <div className="flex justify-between text-[11px] text-slate-600">
-                <span>Previous Price / Rate (SGD):</span>
-                <span>Date: {quickPrevDate}</span>
-              </div>
-              <input
-                type="number"
-                step="any"
-                value={quickPrevPrice}
-                onChange={(e) => setQuickPrevPrice(parseFloat(e.target.value) || 0)}
-                className="w-full bg-white border border-slate-300 rounded px-2.5 py-1 font-mono text-xs font-semibold text-slate-800"
+            {/* Previous Contract Time Period Input */}
+            <div className="bg-white p-2.5 rounded border border-slate-200 space-y-2">
+              <ContractPeriodInput
+                label="Previous Contract Period:"
+                period={quickPrevDate}
+                onChangePeriod={setQuickPrevDate}
+                durationMonths={quickPrevDuration}
+                onChangeDuration={setQuickPrevDuration}
+                showDuration={true}
               />
+
+              <div className="pt-1">
+                <span className="text-[11px] text-slate-600 block mb-0.5">Previous Contract Price (SGD):</span>
+                <input
+                  type="number"
+                  step="any"
+                  value={quickPrevPrice}
+                  onChange={(e) => setQuickPrevPrice(parseFloat(e.target.value) || 0)}
+                  className="w-full bg-slate-50 border border-slate-300 rounded px-2.5 py-1 font-mono text-xs font-semibold text-slate-800"
+                  placeholder="Enter previous contract unit rate"
+                />
+              </div>
             </div>
 
-            <div className="pt-1">
-              <div className="flex justify-between text-[11px] text-slate-600">
-                <span>New Tender Quote Rate (SGD):</span>
-                <span>Date: {quickNewDate}</span>
-              </div>
-              <input
-                type="number"
-                step="any"
-                value={quickNewPrice}
-                onChange={(e) => setQuickNewPrice(parseFloat(e.target.value) || 0)}
-                className="w-full bg-white border border-slate-300 rounded px-2.5 py-1 font-mono text-xs font-bold text-slate-900"
+            {/* Current Tender Quote Period Input */}
+            <div className="bg-white p-2.5 rounded border border-slate-200 space-y-2">
+              <ContractPeriodInput
+                label="New Tender Submission Date:"
+                period={quickNewDate}
+                onChangePeriod={setQuickNewDate}
+                isTender={true}
               />
+
+              <div className="pt-1">
+                <span className="text-[11px] text-slate-600 block mb-0.5">New Tender Quote Rate (SGD):</span>
+                <input
+                  type="number"
+                  step="any"
+                  value={quickNewPrice}
+                  onChange={(e) => setQuickNewPrice(parseFloat(e.target.value) || 0)}
+                  className="w-full bg-slate-50 border border-slate-300 rounded px-2.5 py-1 font-mono text-xs font-bold text-slate-900"
+                  placeholder="Enter current tender unit rate"
+                />
+              </div>
             </div>
           </div>
 
