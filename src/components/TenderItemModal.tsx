@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { X, Plus, Save, Building2, Wrench, Clock, AlertTriangle } from 'lucide-react';
-import { CatalogueSeries, FXRate, GstBasis, TenderLineItem } from '../types/index.ts';
+import { X, Plus, Save, Building2, Wrench, Clock, AlertTriangle, Sliders, RefreshCw } from 'lucide-react';
+import { CatalogueSeries, CompositeWeightItem, FXRate, GstBasis, TenderLineItem } from '../types/index.ts';
 import { ME_TRADE_TEMPLATES } from '../server/catalogueData.ts';
 
 interface TenderItemModalProps {
@@ -48,8 +48,23 @@ export const TenderItemModal: React.FC<TenderItemModalProps> = ({
   const [technicianHeadcount, setTechnicianHeadcount] = useState(2);
   const [serviceFrequency, setServiceFrequency] = useState('Monthly scheduled servicing');
 
-  // Selected trade template for M&E
-  const [selectedTradeTemplate, setSelectedTradeTemplate] = useState('ACMV');
+  // M&E Custom Breakdown Composition State
+  const [modalWeights, setModalWeights] = useState<CompositeWeightItem[]>([
+    { componentName: 'Major Equipment', seriesId: 'SINGSTAT-IPI-DIV74-PUMPS', weightPercent: 45, description: 'Equipment' },
+    { componentName: 'Materials & Containment', seriesId: 'SINGSTAT-DSPI-DIV68-ALUM', weightPercent: 25, description: 'Materials' },
+    { componentName: 'Installation Labour', seriesId: 'SINGSTAT-ULC-CONST', weightPercent: 18, description: 'Labour' },
+    { componentName: 'Testing & Commissioning', seriesId: 'SINGSTAT-ULC-CONST', weightPercent: 5, description: 'T&C' },
+    { componentName: 'Overhead & Profit', seriesId: 'SINGSTAT-ULC-TOTAL', weightPercent: 7, description: 'O&P' }
+  ]);
+
+  const meSeries = catalogue.filter(c =>
+    c.category === 'ME_EQUIPMENT' ||
+    c.id.includes('CABLE') ||
+    c.id.includes('ALUM') ||
+    c.id.includes('STEEL') ||
+    c.id.includes('ULC') ||
+    c.id.includes('WAGE')
+  );
 
   useEffect(() => {
     if (itemToEdit) {
@@ -74,8 +89,10 @@ export const TenderItemModal: React.FC<TenderItemModalProps> = ({
       if (itemToEdit.labourSharePercent !== undefined) setLabourSharePercent(itemToEdit.labourSharePercent);
       if (itemToEdit.technicianHeadcount) setTechnicianHeadcount(itemToEdit.technicianHeadcount);
       if (itemToEdit.serviceFrequency) setServiceFrequency(itemToEdit.serviceFrequency);
+      if (itemToEdit.customCompositeWeights && itemToEdit.customCompositeWeights.length > 0) {
+        setModalWeights(itemToEdit.customCompositeWeights);
+      }
     } else {
-      // Reset defaults
       setDescription('Structural Steel Works Supply');
       setSpecification('High-Tensile BS 4449 Standard, Grade B500B delivered to site');
     }
@@ -105,45 +122,25 @@ export const TenderItemModal: React.FC<TenderItemModalProps> = ({
     }
   };
 
+  const weightSum = modalWeights.reduce((s, w) => s + w.weightPercent, 0);
+
+  const handleAutoBalanceModalWeights = () => {
+    if (weightSum <= 0) return;
+    const factor = 100 / weightSum;
+    let accumulated = 0;
+    const balanced = modalWeights.map((w, idx) => {
+      if (idx === modalWeights.length - 1) {
+        return { ...w, weightPercent: Math.max(0, 100 - accumulated) };
+      }
+      const rounded = Math.round(w.weightPercent * factor);
+      accumulated += rounded;
+      return { ...w, weightPercent: rounded };
+    });
+    setModalWeights(balanced);
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-
-    let customWeights = itemToEdit?.customCompositeWeights;
-    if (category === 'ME_TRADE' && (!customWeights || customWeights.length === 0)) {
-      const tmpl = ME_TRADE_TEMPLATES[selectedTradeTemplate] || ME_TRADE_TEMPLATES['ACMV'];
-      customWeights = [
-        {
-          componentName: 'Major Plant Equipment',
-          seriesId: tmpl.recommendedSeries.equipmentSeriesId,
-          weightPercent: tmpl.defaultWeights.equipment,
-          description: 'Equipment component'
-        },
-        {
-          componentName: 'Materials & Piping',
-          seriesId: tmpl.recommendedSeries.materialsSeriesId,
-          weightPercent: tmpl.defaultWeights.materials,
-          description: 'Materials component'
-        },
-        {
-          componentName: 'Installation Labour',
-          seriesId: tmpl.recommendedSeries.labourSeriesId,
-          weightPercent: tmpl.defaultWeights.labour,
-          description: 'Trade site labour'
-        },
-        {
-          componentName: 'Testing & Commissioning',
-          seriesId: tmpl.recommendedSeries.labourSeriesId,
-          weightPercent: tmpl.defaultWeights.testingCommissioning,
-          description: 'T&C labour'
-        },
-        {
-          componentName: 'Overhead & Profit',
-          seriesId: 'SINGSTAT-ULC-TOTAL',
-          weightPercent: tmpl.defaultWeights.overheadProfit,
-          description: 'Corporate overhead (factor 1.0)'
-        }
-      ];
-    }
 
     const newItem: TenderLineItem = {
       id: itemToEdit?.id || 'TND-' + Date.now(),
@@ -166,7 +163,7 @@ export const TenderItemModal: React.FC<TenderItemModalProps> = ({
       tenderUnitPrice,
       tenderTotalPrice: tenderUnitPrice * quantity,
       benchmarkSeriesId,
-      customCompositeWeights: customWeights,
+      customCompositeWeights: category === 'ME_TRADE' ? modalWeights : undefined,
       contractDurationMonths: category === 'MAINTENANCE' ? contractDurationMonths : undefined,
       labourSharePercent: category === 'MAINTENANCE' ? labourSharePercent : undefined,
       technicianHeadcount: category === 'MAINTENANCE' ? technicianHeadcount : undefined,
@@ -442,23 +439,96 @@ export const TenderItemModal: React.FC<TenderItemModalProps> = ({
             </div>
           </div>
 
-          {/* Benchmark Selection */}
-          <div>
-            <label className="block text-[11px] font-semibold text-slate-700 mb-1">
-              Primary Official Benchmark Series
-            </label>
-            <select
-              value={benchmarkSeriesId}
-              onChange={(e) => setBenchmarkSeriesId(e.target.value)}
-              className="w-full bg-slate-50 border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 font-medium focus:bg-white focus:outline-hidden"
-            >
-              {catalogue.map(cat => (
-                <option key={cat.id} value={cat.id}>
-                  [{cat.publisher.split(' ')[0]}] {cat.title} ({cat.unit})
-                </option>
-              ))}
-            </select>
-          </div>
+          {/* Benchmark Selection (for materials) */}
+          {category === 'MATERIAL' && (
+            <div>
+              <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                Primary Official Benchmark Series
+              </label>
+              <select
+                value={benchmarkSeriesId}
+                onChange={(e) => setBenchmarkSeriesId(e.target.value)}
+                className="w-full bg-slate-50 border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 font-medium focus:bg-white focus:outline-hidden"
+              >
+                {catalogue.map(cat => (
+                  <option key={cat.id} value={cat.id}>
+                    [{cat.publisher.split(' ')[0]}] {cat.title} ({cat.unit})
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {/* M&E Trade Pricing Breakdown Composition */}
+          {category === 'ME_TRADE' && (
+            <div className="p-3.5 bg-indigo-50/70 border border-indigo-200 rounded-lg space-y-3 text-xs">
+              <div className="flex items-center justify-between">
+                <div className="font-bold text-indigo-950 flex items-center gap-1.5">
+                  <Sliders className="w-4 h-4 text-indigo-700" />
+                  <span>M&amp;E Pricing Breakdown Composition (%)</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className={`px-2 py-0.5 rounded font-mono font-bold text-[11px] ${
+                    Math.abs(weightSum - 100) < 0.1 ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'
+                  }`}>
+                    Total: {weightSum}%
+                  </span>
+                  {Math.abs(weightSum - 100) >= 0.1 && (
+                    <button
+                      type="button"
+                      onClick={handleAutoBalanceModalWeights}
+                      className="text-[10px] bg-indigo-600 text-white px-2 py-0.5 rounded cursor-pointer font-bold"
+                    >
+                      Balance
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                {modalWeights.map((w, idx) => (
+                  <div key={idx} className="bg-white p-2.5 rounded border border-slate-200 grid grid-cols-12 gap-2 items-center">
+                    <span className="col-span-5 font-semibold text-slate-800 truncate" title={w.componentName}>
+                      {w.componentName}
+                    </span>
+                    <div className="col-span-3 flex items-center gap-1">
+                      <input
+                        type="number"
+                        min="0"
+                        max="100"
+                        value={w.weightPercent}
+                        onChange={(e) => {
+                          const val = parseInt(e.target.value, 10) || 0;
+                          const updated = [...modalWeights];
+                          updated[idx] = { ...updated[idx], weightPercent: val };
+                          setModalWeights(updated);
+                        }}
+                        className="w-14 bg-slate-50 border border-slate-300 rounded px-1.5 py-0.5 text-right font-mono font-bold text-indigo-700 text-xs"
+                      />
+                      <span className="text-slate-500 font-mono">%</span>
+                    </div>
+                    <div className="col-span-4">
+                      <select
+                        value={w.seriesId}
+                        onChange={(e) => {
+                          const updated = [...modalWeights];
+                          updated[idx] = { ...updated[idx], seriesId: e.target.value };
+                          setModalWeights(updated);
+                        }}
+                        className="w-full bg-slate-50 border border-slate-300 rounded px-1 py-0.5 text-[10px] text-slate-700 truncate"
+                      >
+                        {meSeries.map(s => (
+                          <option key={s.id} value={s.id}>
+                            {s.title}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Maintenance Specific Options */}
           {category === 'MAINTENANCE' && (

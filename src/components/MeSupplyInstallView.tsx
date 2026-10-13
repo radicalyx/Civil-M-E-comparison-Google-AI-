@@ -10,7 +10,11 @@ import {
   Edit2,
   Trash2,
   Info,
-  LineChart
+  RefreshCw,
+  Sparkles,
+  ChevronDown,
+  ChevronUp,
+  X
 } from 'lucide-react';
 import { CatalogueSeries, CompositeWeightItem, DataObservation, TenderLineItem } from '../types/index.ts';
 import { ME_TRADE_TEMPLATES } from '../server/catalogueData.ts';
@@ -45,12 +49,16 @@ export const MeSupplyInstallView: React.FC<MeSupplyInstallViewProps> = ({
   const meIndices = items.map((item, idx) => item.category === 'ME_TRADE' ? idx : -1).filter(idx => idx !== -1);
   const meResults = meIndices.map(idx => itemResults[idx]).filter(Boolean);
 
-  // M&E Series for graph
+  // M&E Series for graph and component mapping
   const meSeries = catalogue.filter(c =>
     c.category === 'ME_EQUIPMENT' ||
     c.id === 'SINGSTAT-DSPI-DIV77-CABLE' ||
     c.id === 'SINGSTAT-DSPI-DIV68-ALUM' ||
-    c.id === 'SINGSTAT-ULC-CONST'
+    c.id === 'SINGSTAT-DSPI-DIV67' ||
+    c.id === 'SINGSTAT-DSPI-DIV66-NONMETALLIC' ||
+    c.id === 'SINGSTAT-ULC-CONST' ||
+    c.id === 'SINGSTAT-ULC-TOTAL' ||
+    c.id === 'MOM-WAGE-TECH-ME'
   );
 
   // Dedicated M&E Totals (Evaluated Separately)
@@ -70,10 +78,161 @@ export const MeSupplyInstallView: React.FC<MeSupplyInstallViewProps> = ({
   const [quickNewPrice, setQuickNewPrice] = useState(845000);
   const [quickNewDate, setQuickNewDate] = useState('2024M06');
 
-  // Trade template
+  // Trade template defaults
   const currentTemplate = ME_TRADE_TEMPLATES[quickTrade] || ME_TRADE_TEMPLATES['ACMV'];
 
-  // Test item for live verdict
+  // CUSTOM BREAKDOWN COMPOSITION STATE FOR QUICK CHECKER
+  const [showBreakdownEditor, setShowBreakdownEditor] = useState(false);
+  const [quickWeights, setQuickWeights] = useState<CompositeWeightItem[]>([
+    {
+      componentName: 'Major Equipment (Chillers / AHUs / Plant)',
+      seriesId: currentTemplate.recommendedSeries.equipmentSeriesId,
+      weightPercent: currentTemplate.defaultWeights.equipment,
+      description: 'Capital equipment imported into Singapore'
+    },
+    {
+      componentName: 'Materials & Containment (Ducts, Piping, Trays)',
+      seriesId: currentTemplate.recommendedSeries.materialsSeriesId,
+      weightPercent: currentTemplate.defaultWeights.materials,
+      description: 'Fabricated materials and containment'
+    },
+    {
+      componentName: 'Site Installation & Assembly Labour',
+      seriesId: currentTemplate.recommendedSeries.labourSeriesId,
+      weightPercent: currentTemplate.defaultWeights.labour,
+      description: 'Trade installation and rigging labour'
+    },
+    {
+      componentName: 'Testing & Commissioning (T&C)',
+      seriesId: currentTemplate.recommendedSeries.labourSeriesId,
+      weightPercent: currentTemplate.defaultWeights.testingCommissioning,
+      description: 'Balancing, calibration and technical inspection'
+    },
+    {
+      componentName: 'Contractor Overhead & Profit Margin',
+      seriesId: 'SINGSTAT-ULC-TOTAL',
+      weightPercent: currentTemplate.defaultWeights.overheadProfit,
+      description: 'Fixed corporate overhead & management margin'
+    }
+  ]);
+
+  // Modal State for editing breakdown of an existing saved item
+  const [editingItemWeights, setEditingItemWeights] = useState<TenderLineItem | null>(null);
+  const [modalWeights, setModalWeights] = useState<CompositeWeightItem[]>([]);
+
+  // Calculate sum of weights
+  const quickWeightSum = quickWeights.reduce((sum, w) => sum + w.weightPercent, 0);
+  const isQuickWeightValid = Math.abs(quickWeightSum - 100) < 0.1;
+
+  // Auto-balance weights function
+  const handleAutoBalanceQuickWeights = () => {
+    if (quickWeights.length === 0) return;
+    const currentSum = quickWeights.reduce((s, w) => s + w.weightPercent, 0);
+    if (currentSum <= 0) return;
+    const factor = 100 / currentSum;
+    let accumulated = 0;
+    const balanced = quickWeights.map((w, idx) => {
+      if (idx === quickWeights.length - 1) {
+        return { ...w, weightPercent: Math.max(0, 100 - accumulated) };
+      }
+      const rounded = Math.round(w.weightPercent * factor);
+      accumulated += rounded;
+      return { ...w, weightPercent: rounded };
+    });
+    setQuickWeights(balanced);
+  };
+
+  const handleAddQuickComponent = () => {
+    setQuickWeights(prev => [
+      ...prev,
+      {
+        componentName: 'Custom Trade Component',
+        seriesId: 'SINGSTAT-IPI-DIV74-PUMPS',
+        weightPercent: 0,
+        description: 'User-defined M&E component'
+      }
+    ]);
+  };
+
+  const handleDeleteQuickComponent = (indexToDelete: number) => {
+    if (quickWeights.length <= 1) return;
+    setQuickWeights(prev => prev.filter((_, idx) => idx !== indexToDelete));
+  };
+
+  const handleAutoBalanceModalWeights = () => {
+    if (modalWeights.length === 0) return;
+    const currentSum = modalWeights.reduce((s, w) => s + w.weightPercent, 0);
+    if (currentSum <= 0) return;
+    const factor = 100 / currentSum;
+    let accumulated = 0;
+    const balanced = modalWeights.map((w, idx) => {
+      if (idx === modalWeights.length - 1) {
+        return { ...w, weightPercent: Math.max(0, 100 - accumulated) };
+      }
+      const rounded = Math.round(w.weightPercent * factor);
+      accumulated += rounded;
+      return { ...w, weightPercent: rounded };
+    });
+    setModalWeights(balanced);
+  };
+
+  const handleAddModalComponent = () => {
+    setModalWeights(prev => [
+      ...prev,
+      {
+        componentName: 'Custom Trade Component',
+        seriesId: 'SINGSTAT-IPI-DIV74-PUMPS',
+        weightPercent: 0,
+        description: 'User-defined M&E component'
+      }
+    ]);
+  };
+
+  const handleDeleteModalComponent = (indexToDelete: number) => {
+    if (modalWeights.length <= 1) return;
+    setModalWeights(prev => prev.filter((_, idx) => idx !== indexToDelete));
+  };
+
+  // Preset breakdown compositions
+  const handleApplyPreset = (presetName: string) => {
+    if (presetName === 'EQUIPMENT_HEAVY') {
+      // 60% Equipment, 15% Materials, 12% Labour, 6% T&C, 7% O&P
+      setQuickWeights([
+        { componentName: 'Major Equipment', seriesId: currentTemplate.recommendedSeries.equipmentSeriesId, weightPercent: 60, description: 'Capital equipment' },
+        { componentName: 'Materials & Containment', seriesId: currentTemplate.recommendedSeries.materialsSeriesId, weightPercent: 15, description: 'Materials' },
+        { componentName: 'Installation Labour', seriesId: currentTemplate.recommendedSeries.labourSeriesId, weightPercent: 12, description: 'Labour' },
+        { componentName: 'Testing & Commissioning', seriesId: currentTemplate.recommendedSeries.labourSeriesId, weightPercent: 6, description: 'T&C' },
+        { componentName: 'Overhead & Profit', seriesId: 'SINGSTAT-ULC-TOTAL', weightPercent: 7, description: 'O&P' }
+      ]);
+    } else if (presetName === 'LABOUR_HEAVY') {
+      // 30% Equipment, 25% Materials, 30% Labour, 8% T&C, 7% O&P
+      setQuickWeights([
+        { componentName: 'Major Equipment', seriesId: currentTemplate.recommendedSeries.equipmentSeriesId, weightPercent: 30, description: 'Capital equipment' },
+        { componentName: 'Materials & Containment', seriesId: currentTemplate.recommendedSeries.materialsSeriesId, weightPercent: 25, description: 'Materials' },
+        { componentName: 'Installation Labour', seriesId: currentTemplate.recommendedSeries.labourSeriesId, weightPercent: 30, description: 'Labour' },
+        { componentName: 'Testing & Commissioning', seriesId: currentTemplate.recommendedSeries.labourSeriesId, weightPercent: 8, description: 'T&C' },
+        { componentName: 'Overhead & Profit', seriesId: 'SINGSTAT-ULC-TOTAL', weightPercent: 7, description: 'O&P' }
+      ]);
+    } else if (presetName === 'BALANCED') {
+      // Standard template default
+      setQuickWeights([
+        { componentName: 'Major Plant Equipment', seriesId: currentTemplate.recommendedSeries.equipmentSeriesId, weightPercent: currentTemplate.defaultWeights.equipment, description: 'Capital equipment' },
+        { componentName: 'Materials & Containment', seriesId: currentTemplate.recommendedSeries.materialsSeriesId, weightPercent: currentTemplate.defaultWeights.materials, description: 'Materials' },
+        { componentName: 'Installation Labour', seriesId: currentTemplate.recommendedSeries.labourSeriesId, weightPercent: currentTemplate.defaultWeights.labour, description: 'Labour' },
+        { componentName: 'Testing & Commissioning', seriesId: currentTemplate.recommendedSeries.labourSeriesId, weightPercent: currentTemplate.defaultWeights.testingCommissioning, description: 'T&C' },
+        { componentName: 'Overhead & Profit', seriesId: 'SINGSTAT-ULC-TOTAL', weightPercent: currentTemplate.defaultWeights.overheadProfit, description: 'O&P' }
+      ]);
+    } else if (presetName === 'EQUAL_SPLIT') {
+      const splitVal = Math.floor(100 / quickWeights.length);
+      const rem = 100 - splitVal * quickWeights.length;
+      setQuickWeights(prev => prev.map((w, i) => ({
+        ...w,
+        weightPercent: i === 0 ? splitVal + rem : splitVal
+      })));
+    }
+  };
+
+  // Live test item with custom breakdown
   const testItem: TenderLineItem = {
     id: 'QUICK-ME-TEST',
     tendererName: quickTenderer || 'M&E Contractor',
@@ -93,38 +252,7 @@ export const MeSupplyInstallView: React.FC<MeSupplyInstallViewProps> = ({
     tenderUnitPrice: quickNewPrice,
     tenderTotalPrice: quickNewPrice,
     benchmarkSeriesId: 'COMPOSITE_' + quickTrade,
-    customCompositeWeights: [
-      {
-        componentName: 'Major Plant Equipment',
-        seriesId: currentTemplate.recommendedSeries.equipmentSeriesId,
-        weightPercent: currentTemplate.defaultWeights.equipment,
-        description: 'Equipment'
-      },
-      {
-        componentName: 'Ductwork & Materials',
-        seriesId: currentTemplate.recommendedSeries.materialsSeriesId,
-        weightPercent: currentTemplate.defaultWeights.materials,
-        description: 'Materials'
-      },
-      {
-        componentName: 'Installation Labour',
-        seriesId: currentTemplate.recommendedSeries.labourSeriesId,
-        weightPercent: currentTemplate.defaultWeights.labour,
-        description: 'Labour'
-      },
-      {
-        componentName: 'Testing & Commissioning',
-        seriesId: currentTemplate.recommendedSeries.labourSeriesId,
-        weightPercent: currentTemplate.defaultWeights.testingCommissioning,
-        description: 'T&C'
-      },
-      {
-        componentName: 'Overhead & Profit',
-        seriesId: 'SINGSTAT-ULC-TOTAL',
-        weightPercent: currentTemplate.defaultWeights.overheadProfit,
-        description: 'O&P'
-      }
-    ]
+    customCompositeWeights: quickWeights
   };
 
   const liveResult = calculateItemBenchmark(testItem, catalogue, observationsMap);
@@ -141,6 +269,27 @@ export const MeSupplyInstallView: React.FC<MeSupplyInstallViewProps> = ({
     setQuickTenderer('');
   };
 
+  const handleOpenModalWeights = (item: TenderLineItem) => {
+    setEditingItemWeights(item);
+    setModalWeights(
+      item.customCompositeWeights && item.customCompositeWeights.length > 0
+        ? [...item.customCompositeWeights]
+        : [
+            { componentName: 'Equipment', seriesId: 'SINGSTAT-IPI-DIV74-PUMPS', weightPercent: 45, description: 'Equipment' },
+            { componentName: 'Materials', seriesId: 'SINGSTAT-DSPI-DIV68-ALUM', weightPercent: 25, description: 'Materials' },
+            { componentName: 'Labour', seriesId: 'SINGSTAT-ULC-CONST', weightPercent: 18, description: 'Labour' },
+            { componentName: 'Testing & Commissioning', seriesId: 'SINGSTAT-ULC-CONST', weightPercent: 5, description: 'T&C' },
+            { componentName: 'Overhead & Profit', seriesId: 'SINGSTAT-ULC-TOTAL', weightPercent: 7, description: 'O&P' }
+          ]
+    );
+  };
+
+  const handleSaveModalWeights = () => {
+    if (!editingItemWeights) return;
+    onUpdateWeights(editingItemWeights.id, modalWeights);
+    setEditingItemWeights(null);
+  };
+
   const handleExportMeCsv = () => {
     const headers = [
       'Trade Code',
@@ -151,6 +300,7 @@ export const MeSupplyInstallView: React.FC<MeSupplyInstallViewProps> = ({
       'Composite Benchmark (SGD)',
       'Difference (SGD)',
       'Difference (%)',
+      'Pricing Breakdown Composition',
       'Status'
     ];
 
@@ -158,6 +308,9 @@ export const MeSupplyInstallView: React.FC<MeSupplyInstallViewProps> = ({
       const origIdx = items.indexOf(item);
       const res = itemResults[origIdx];
       const status = res?.varianceSgd > 0 ? 'Above Benchmark' : 'Within Benchmark';
+      const breakdownSummary = (item.customCompositeWeights || [])
+        .map(w => `${w.componentName}: ${w.weightPercent}%`)
+        .join('; ');
 
       return [
         sanitizeCsvField(item.itemCode),
@@ -168,6 +321,7 @@ export const MeSupplyInstallView: React.FC<MeSupplyInstallViewProps> = ({
         sanitizeCsvField(res ? res.benchmarkCostSgd : 0),
         sanitizeCsvField(res ? res.varianceSgd : 0),
         sanitizeCsvField(res ? res.variancePercent : 0),
+        sanitizeCsvField(breakdownSummary),
         sanitizeCsvField(status)
       ].join(',');
     });
@@ -193,7 +347,7 @@ export const MeSupplyInstallView: React.FC<MeSupplyInstallViewProps> = ({
             </h2>
           </div>
           <p className="text-xs text-indigo-200 mt-1 max-w-2xl">
-            ACMV, Electrical, Plumbing, Fire Protection, Lifts, and ELV trades evaluated separately via pre-configured equipment, material, and labour weightings.
+            Customizable pricing breakdown composition across Equipment, Materials, Installation Labour, T&amp;C, and Overhead.
           </p>
         </div>
 
@@ -219,20 +373,30 @@ export const MeSupplyInstallView: React.FC<MeSupplyInstallViewProps> = ({
         colorTheme="indigo"
       />
 
-      {/* QUICK M&E CHECKER FOR LAYMEN */}
+      {/* QUICK M&E CHECKER WITH CUSTOM BREAKDOWN COMPOSITION */}
       <div className="bg-white border-2 border-indigo-200 rounded-xl p-4 sm:p-6 shadow-sm space-y-4">
-        <div className="border-b border-slate-100 pb-3 flex items-center justify-between">
+        <div className="border-b border-slate-100 pb-3 flex flex-wrap items-center justify-between gap-3">
           <div>
             <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
               <span className="w-5 h-5 rounded-full bg-indigo-600 text-white flex items-center justify-center text-xs font-bold">✓</span>
-              <span>Quick M&amp;E Quote Checker: Test an M&amp;E Package Quote</span>
+              <span>Quick M&amp;E Quote Checker &amp; Cost Breakdown Engine</span>
             </h3>
             <p className="text-xs text-slate-500 mt-0.5">
-              Select trade and enter previous package price vs contractor quote
+              Select trade, enter prices, and customize the equipment vs labour breakdown composition
             </p>
           </div>
+
+          <button
+            onClick={() => setShowBreakdownEditor(!showBreakdownEditor)}
+            className="flex items-center gap-1.5 text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 px-3 py-1.5 rounded-lg transition cursor-pointer"
+          >
+            <Sliders className="w-3.5 h-3.5" />
+            <span>{showBreakdownEditor ? 'Hide Breakdown Sliders' : 'Customize Pricing Breakdown (%)'}</span>
+            {showBreakdownEditor ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+          </button>
         </div>
 
+        {/* MAIN STEP 1-2-3 FORM */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
           {/* Step 1: Trade */}
           <div className="space-y-2 bg-slate-50 p-3.5 rounded-lg border border-slate-200">
@@ -246,6 +410,7 @@ export const MeSupplyInstallView: React.FC<MeSupplyInstallViewProps> = ({
               onChange={(e) => {
                 const tr = e.target.value;
                 setQuickTrade(tr);
+                const tmpl = ME_TRADE_TEMPLATES[tr] || ME_TRADE_TEMPLATES['ACMV'];
                 if (tr === 'ACMV') {
                   setQuickDesc('Chiller Plant & AHU Replacement');
                   setQuickPrevPrice(680000);
@@ -282,6 +447,40 @@ export const MeSupplyInstallView: React.FC<MeSupplyInstallViewProps> = ({
                   setQuickNewPrice(245000);
                   setSelectedChartSeriesId('SINGSTAT-IPI-DIV75-BMS-ELV');
                 }
+
+                // Update default weights for this trade
+                setQuickWeights([
+                  {
+                    componentName: 'Major Plant Equipment',
+                    seriesId: tmpl.recommendedSeries.equipmentSeriesId,
+                    weightPercent: tmpl.defaultWeights.equipment,
+                    description: 'Capital equipment'
+                  },
+                  {
+                    componentName: 'Materials & Containment',
+                    seriesId: tmpl.recommendedSeries.materialsSeriesId,
+                    weightPercent: tmpl.defaultWeights.materials,
+                    description: 'Materials & ducts'
+                  },
+                  {
+                    componentName: 'Installation Labour',
+                    seriesId: tmpl.recommendedSeries.labourSeriesId,
+                    weightPercent: tmpl.defaultWeights.labour,
+                    description: 'Trade site labour'
+                  },
+                  {
+                    componentName: 'Testing & Commissioning',
+                    seriesId: tmpl.recommendedSeries.labourSeriesId,
+                    weightPercent: tmpl.defaultWeights.testingCommissioning,
+                    description: 'T&C inspection'
+                  },
+                  {
+                    componentName: 'Overhead & Profit',
+                    seriesId: 'SINGSTAT-ULC-TOTAL',
+                    weightPercent: tmpl.defaultWeights.overheadProfit,
+                    description: 'Contractor margin'
+                  }
+                ]);
               }}
               className="w-full bg-white border border-slate-300 rounded px-2.5 py-1.5 font-semibold text-slate-800 text-xs focus:ring-1 focus:ring-indigo-600 focus:outline-hidden"
             >
@@ -350,7 +549,7 @@ export const MeSupplyInstallView: React.FC<MeSupplyInstallViewProps> = ({
             <div>
               <div className="flex items-center justify-between">
                 <span className="text-[10px] font-bold uppercase tracking-wider text-slate-600">
-                  Step 3: Trade Benchmark Verdict
+                  Step 3: Composite Benchmark Verdict
                 </span>
                 <span className={`px-2 py-0.5 rounded text-[11px] font-bold ${
                   isOver ? 'bg-rose-200 text-rose-800' : 'bg-emerald-200 text-emerald-800'
@@ -365,7 +564,7 @@ export const MeSupplyInstallView: React.FC<MeSupplyInstallViewProps> = ({
                 </div>
                 <div className="text-[11px] text-slate-600 mt-0.5 leading-relaxed">
                   Composite benchmark: <strong>SGD {liveResult.benchmarkCostSgd.toLocaleString()}</strong>.
-                  Calculated from imported equipment index, materials index, and trade labour.
+                  Factor: <strong>{liveResult.trace?.indexFactor.toFixed(4)}</strong> based on customized breakdown composition.
                 </div>
               </div>
             </div>
@@ -379,6 +578,172 @@ export const MeSupplyInstallView: React.FC<MeSupplyInstallViewProps> = ({
             </button>
           </div>
         </div>
+
+        {/* INTERACTIVE BREAKDOWN COMPOSITION SLIDERS (EXPANDABLE) */}
+        {showBreakdownEditor && (
+          <div className="bg-indigo-50/70 border border-indigo-200 rounded-xl p-4 sm:p-5 space-y-4 animate-in fade-in duration-200">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-indigo-200/60 pb-3">
+              <div>
+                <h4 className="text-xs font-bold text-indigo-950 flex items-center gap-1.5">
+                  <Sliders className="w-4 h-4 text-indigo-700" />
+                  <span>Customize Pricing Breakdown Composition for {currentTemplate.tradeName}</span>
+                </h4>
+                <p className="text-[11px] text-indigo-800 mt-0.5">
+                  Adjust component percentages to match your project's Bill of Quantities (BOQ). Weights must total 100%.
+                </p>
+              </div>
+
+              {/* Total indicator & Balance button */}
+              <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1 font-mono text-xs">
+                  <span className="text-slate-600">Total:</span>
+                  <span className={`px-2 py-0.5 rounded font-bold ${
+                    isQuickWeightValid ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' : 'bg-rose-100 text-rose-800 border border-rose-300'
+                  }`}>
+                    {quickWeightSum}% {isQuickWeightValid ? '✓ Valid' : `⚠ (Off by ${100 - quickWeightSum}%)`}
+                  </span>
+                </div>
+
+                {!isQuickWeightValid && (
+                  <button
+                    onClick={handleAutoBalanceQuickWeights}
+                    className="flex items-center gap-1 text-[11px] font-bold text-white bg-indigo-600 hover:bg-indigo-700 px-2.5 py-1 rounded cursor-pointer transition shadow-xs"
+                  >
+                    <RefreshCw className="w-3 h-3" />
+                    <span>Auto-Balance to 100%</span>
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Presets Row */}
+            <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-[11px] font-semibold text-slate-600 flex items-center gap-1">
+                  <Sparkles className="w-3 h-3 text-amber-500" />
+                  <span>Industry Presets:</span>
+                </span>
+                <button
+                  onClick={() => handleApplyPreset('BALANCED')}
+                  className="px-2.5 py-1 bg-white hover:bg-slate-100 border border-slate-300 rounded text-[11px] font-medium text-slate-700 cursor-pointer"
+                >
+                  Standard Trade Default
+                </button>
+                <button
+                  onClick={() => handleApplyPreset('EQUIPMENT_HEAVY')}
+                  className="px-2.5 py-1 bg-white hover:bg-slate-100 border border-slate-300 rounded text-[11px] font-medium text-slate-700 cursor-pointer"
+                >
+                  Heavy Equipment (60% Eq / 15% Mat)
+                </button>
+                <button
+                  onClick={() => handleApplyPreset('LABOUR_HEAVY')}
+                  className="px-2.5 py-1 bg-white hover:bg-slate-100 border border-slate-300 rounded text-[11px] font-medium text-slate-700 cursor-pointer"
+                >
+                  Labour-Heavy Retrofit (30% Eq / 30% Lab)
+                </button>
+                <button
+                  onClick={() => handleApplyPreset('EQUAL_SPLIT')}
+                  className="px-2.5 py-1 bg-white hover:bg-slate-100 border border-slate-300 rounded text-[11px] font-medium text-slate-700 cursor-pointer"
+                >
+                  Equal Split
+                </button>
+              </div>
+
+              <button
+                onClick={handleAddQuickComponent}
+                className="flex items-center gap-1 px-2.5 py-1 bg-indigo-900 hover:bg-indigo-800 text-white rounded text-[11px] font-bold cursor-pointer transition shadow-2xs"
+              >
+                <Plus className="w-3 h-3" />
+                <span>+ Add Component</span>
+              </button>
+            </div>
+
+            {/* Component Sliders Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+              {quickWeights.map((comp, idx) => (
+                <div key={idx} className="bg-white p-3 rounded-lg border border-slate-200 shadow-2xs space-y-2 relative">
+                  <div className="flex justify-between items-start gap-1 text-xs">
+                    <input
+                      type="text"
+                      value={comp.componentName}
+                      onChange={(e) => {
+                        const updated = [...quickWeights];
+                        updated[idx] = { ...updated[idx], componentName: e.target.value };
+                        setQuickWeights(updated);
+                      }}
+                      className="font-bold text-slate-900 bg-transparent border-b border-transparent hover:border-slate-300 focus:border-indigo-600 focus:outline-hidden text-xs w-full mr-1 truncate"
+                      title="Click to rename component"
+                    />
+                    {quickWeights.length > 1 && (
+                      <button
+                        onClick={() => handleDeleteQuickComponent(idx)}
+                        className="text-slate-400 hover:text-rose-600 p-0.5 rounded cursor-pointer"
+                        title="Delete component"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="flex items-center justify-between gap-2">
+                    <input
+                      type="range"
+                      min="0"
+                      max="100"
+                      step="1"
+                      value={comp.weightPercent}
+                      onChange={(e) => {
+                        const val = parseInt(e.target.value, 10) || 0;
+                        const updated = [...quickWeights];
+                        updated[idx] = { ...updated[idx], weightPercent: val };
+                        setQuickWeights(updated);
+                      }}
+                      className="w-full accent-indigo-600 cursor-pointer"
+                    />
+                    <div className="flex items-center font-mono">
+                      <input
+                        type="number"
+                        min="0"
+                        max="100"
+                        value={comp.weightPercent}
+                        onChange={(e) => {
+                          const val = parseInt(e.target.value, 10) || 0;
+                          const updated = [...quickWeights];
+                          updated[idx] = { ...updated[idx], weightPercent: Math.max(0, Math.min(100, val)) };
+                          setQuickWeights(updated);
+                        }}
+                        className="w-12 bg-slate-50 border border-slate-300 rounded px-1.5 py-0.5 text-right font-bold text-indigo-700 text-xs"
+                      />
+                      <span className="text-[10px] text-slate-500 ml-0.5">%</span>
+                    </div>
+                  </div>
+
+                  {/* Series Selector for Component */}
+                  <div className="pt-1">
+                    <label className="block text-[10px] text-slate-500 font-semibold mb-0.5">
+                      Mapped Index:
+                    </label>
+                    <select
+                      value={comp.seriesId}
+                      onChange={(e) => {
+                        const updated = [...quickWeights];
+                        updated[idx] = { ...updated[idx], seriesId: e.target.value };
+                        setQuickWeights(updated);
+                      }}
+                      className="w-full bg-slate-50 border border-slate-300 rounded px-1.5 py-1 text-[10px] text-slate-800 font-medium truncate"
+                    >
+                      {meSeries.map(s => (
+                        <option key={s.id} value={s.id}>
+                          {s.title}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* M&E TOTALS KPI STRIP (EVALUATED SEPARATELY) */}
@@ -440,7 +805,7 @@ export const MeSupplyInstallView: React.FC<MeSupplyInstallViewProps> = ({
               M&amp;E Packages Evaluation Table ({meItems.length} items)
             </h3>
             <p className="text-xs text-slate-500">
-              Evaluated strictly on M&amp;E composite trade series. No civil mixing.
+              Evaluated strictly on M&amp;E composite trade series. Click "Breakdown" to modify component percentages for any item.
             </p>
           </div>
         </div>
@@ -455,6 +820,7 @@ export const MeSupplyInstallView: React.FC<MeSupplyInstallViewProps> = ({
                 <th className="py-2.5 px-3 text-right">New Tender Quote</th>
                 <th className="py-2.5 px-3 text-right">Composite Benchmark</th>
                 <th className="py-2.5 px-3 text-right">Difference (SGD / %)</th>
+                <th className="py-2.5 px-3 text-center">Breakdown Composition</th>
                 <th className="py-2.5 px-3 text-center">Status</th>
                 <th className="py-2.5 px-3 text-center">Actions</th>
               </tr>
@@ -462,7 +828,7 @@ export const MeSupplyInstallView: React.FC<MeSupplyInstallViewProps> = ({
             <tbody className="divide-y divide-slate-200">
               {meItems.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="py-8 text-center text-slate-500">
+                  <td colSpan={9} className="py-8 text-center text-slate-500">
                     No M&amp;E packages added yet. Use the Quick M&amp;E Quote Checker above to test a package!
                   </td>
                 </tr>
@@ -471,6 +837,7 @@ export const MeSupplyInstallView: React.FC<MeSupplyInstallViewProps> = ({
                   const origIdx = items.indexOf(item);
                   const result = itemResults[origIdx];
                   const isItemOver = result?.varianceSgd > 0;
+                  const weights = item.customCompositeWeights || [];
 
                   return (
                     <tr key={item.id} className="hover:bg-slate-50/70 transition">
@@ -517,6 +884,20 @@ export const MeSupplyInstallView: React.FC<MeSupplyInstallViewProps> = ({
                         </div>
                       </td>
 
+                      {/* Breakdown composition column with quick edit button */}
+                      <td className="py-3 px-3 text-center">
+                        <button
+                          onClick={() => handleOpenModalWeights(item)}
+                          className="inline-flex items-center gap-1 text-[11px] text-indigo-700 hover:text-indigo-900 font-semibold bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 px-2 py-1 rounded cursor-pointer transition"
+                          title="Click to view and edit component weight percentages"
+                        >
+                          <Sliders className="w-3 h-3" />
+                          <span>
+                            {weights.length > 0 ? `${weights[0]?.weightPercent}% / ${weights[1]?.weightPercent}% / ${weights[2]?.weightPercent}%...` : 'Edit Weights'}
+                          </span>
+                        </button>
+                      </td>
+
                       <td className="py-3 px-3 text-center">
                         <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold ${
                           isItemOver ? 'bg-rose-100 text-rose-800' : 'bg-emerald-100 text-emerald-800'
@@ -557,6 +938,177 @@ export const MeSupplyInstallView: React.FC<MeSupplyInstallViewProps> = ({
           </table>
         </div>
       </div>
+
+      {/* MODAL TO EDIT BREAKDOWN OF AN EXISTING SAVED ITEM */}
+      {editingItemWeights && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-xl w-full max-h-[90vh] overflow-y-auto border border-slate-200">
+            <div className="p-4 sm:p-5 border-b border-slate-200 flex items-center justify-between sticky top-0 bg-white z-10">
+              <div className="flex items-center gap-2">
+                <Sliders className="w-5 h-5 text-indigo-600" />
+                <div>
+                  <h3 className="text-base font-bold text-slate-900">
+                    Edit Pricing Breakdown Composition
+                  </h3>
+                  <p className="text-xs text-slate-500 font-mono">
+                    {editingItemWeights.itemCode} · {editingItemWeights.description}
+                  </p>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setEditingItemWeights(null)}
+                className="p-1 text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-100 transition cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-4 sm:p-6 space-y-4 text-xs">
+              <div className="flex flex-wrap items-center justify-between bg-slate-50 p-3 rounded-lg border border-slate-200 gap-2">
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold text-slate-700">Total Weight:</span>
+                  <span className={`font-mono font-bold px-2.5 py-0.5 rounded text-xs ${
+                    Math.abs(modalWeights.reduce((s, w) => s + w.weightPercent, 0) - 100) < 0.1
+                      ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                      : 'bg-rose-100 text-rose-800 border border-rose-300'
+                  }`}>
+                    {modalWeights.reduce((s, w) => s + w.weightPercent, 0)}% {Math.abs(modalWeights.reduce((s, w) => s + w.weightPercent, 0) - 100) < 0.1 ? '✓' : `(Off by ${100 - modalWeights.reduce((s, w) => s + w.weightPercent, 0)}%)`}
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  {Math.abs(modalWeights.reduce((s, w) => s + w.weightPercent, 0) - 100) >= 0.1 && (
+                    <button
+                      onClick={handleAutoBalanceModalWeights}
+                      className="flex items-center gap-1 text-[11px] font-bold text-white bg-indigo-600 hover:bg-indigo-700 px-2.5 py-1 rounded cursor-pointer transition shadow-2xs"
+                    >
+                      <RefreshCw className="w-3 h-3" />
+                      <span>Auto-Balance to 100%</span>
+                    </button>
+                  )}
+
+                  <button
+                    onClick={handleAddModalComponent}
+                    className="flex items-center gap-1 text-[11px] font-bold text-indigo-900 bg-white hover:bg-indigo-50 border border-indigo-300 px-2.5 py-1 rounded cursor-pointer transition"
+                  >
+                    <Plus className="w-3 h-3" />
+                    <span>+ Add Component</span>
+                  </button>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                {modalWeights.map((w, idx) => (
+                  <div key={idx} className="p-3 rounded-lg border border-slate-200 bg-white space-y-2">
+                    <div className="flex justify-between items-center gap-2">
+                      <input
+                        type="text"
+                        value={w.componentName}
+                        onChange={(e) => {
+                          const updated = [...modalWeights];
+                          updated[idx] = { ...updated[idx], componentName: e.target.value };
+                          setModalWeights(updated);
+                        }}
+                        className="font-bold text-slate-900 bg-transparent border-b border-transparent hover:border-slate-300 focus:border-indigo-600 focus:outline-hidden text-xs flex-1 truncate"
+                        title="Click to rename component"
+                      />
+
+                      <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1 font-mono">
+                          <input
+                            type="number"
+                            min="0"
+                            max="100"
+                            value={w.weightPercent}
+                            onChange={(e) => {
+                              const val = parseInt(e.target.value, 10) || 0;
+                              const updated = [...modalWeights];
+                              updated[idx] = { ...updated[idx], weightPercent: Math.max(0, Math.min(100, val)) };
+                              setModalWeights(updated);
+                            }}
+                            className="w-14 bg-slate-50 border border-slate-300 rounded px-1.5 py-0.5 text-right font-bold text-indigo-700 text-xs"
+                          />
+                          <span className="text-slate-500">%</span>
+                        </div>
+
+                        {modalWeights.length > 1 && (
+                          <button
+                            onClick={() => handleDeleteModalComponent(idx)}
+                            className="text-slate-400 hover:text-rose-600 p-1 rounded cursor-pointer"
+                            title="Delete component"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    <input
+                      type="range"
+                      min="0"
+                      max="100"
+                      value={w.weightPercent}
+                      onChange={(e) => {
+                        const val = parseInt(e.target.value, 10) || 0;
+                        const updated = [...modalWeights];
+                        updated[idx] = { ...updated[idx], weightPercent: val };
+                        setModalWeights(updated);
+                      }}
+                      className="w-full accent-indigo-600 cursor-pointer"
+                    />
+
+                    <div>
+                      <label className="block text-[10px] text-slate-500 mb-0.5">Underlying Index:</label>
+                      <select
+                        value={w.seriesId}
+                        onChange={(e) => {
+                          const updated = [...modalWeights];
+                          updated[idx] = { ...updated[idx], seriesId: e.target.value };
+                          setModalWeights(updated);
+                        }}
+                        className="w-full bg-slate-50 border border-slate-300 rounded px-2 py-1 text-[11px] text-slate-800"
+                      >
+                        {meSeries.map(s => (
+                          <option key={s.id} value={s.id}>
+                            {s.title}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="p-4 border-t border-slate-200 bg-slate-50 flex items-center justify-between gap-2">
+              <div className="text-[11px] text-slate-500">
+                {Math.abs(modalWeights.reduce((s, w) => s + w.weightPercent, 0) - 100) >= 0.1 ? (
+                  <span className="text-rose-600 font-semibold">⚠ Weights must sum to 100% to save</span>
+                ) : (
+                  <span className="text-emerald-700 font-semibold">✓ Weights total 100%</span>
+                )}
+              </div>
+
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setEditingItemWeights(null)}
+                  className="px-4 py-1.5 border border-slate-300 rounded text-xs font-medium text-slate-700 hover:bg-slate-100 cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  disabled={Math.abs(modalWeights.reduce((s, w) => s + w.weightPercent, 0) - 100) >= 0.1}
+                  onClick={handleSaveModalWeights}
+                  className="px-4 py-1.5 bg-indigo-900 hover:bg-indigo-800 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded text-xs font-bold transition cursor-pointer"
+                >
+                  Save Breakdown Changes
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
